@@ -1,69 +1,74 @@
 export default function AboutPage() {
   return (
-    <div className="bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-50">
+    <div className="min-h-screen bg-[#050710] text-[#f8f3e8]">
       <main className="mx-auto max-w-4xl px-4 py-16">
         <section className="space-y-6">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            About TechConnect Live
-          </h1>
-          <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
-            TechConnect Live is a professional take on the &quot;Omegle for
-            tech&quot; idea. It helps engineers, founders, students, and
-            builders have real-time 1:1 conversations with other people who are
-            serious about their work.
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9aa2c2]">
+            Product story
           </p>
-          <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
-            Unlike traditional anonymous chat platforms, every participant signs
-            in with LinkedIn or GitHub. That simple change makes it much easier
-            to keep conversations high-signal and cut down on trolls.
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Where hiring managers, builders, and learners all share the same room.
+          </h1>
+          <p className="max-w-2xl text-sm text-[#d3dcec] sm:text-base">
+            TechConnect Live started as a late‑night idea between a recruiter, a
+            staff engineer, and a founder who were tired of forced networking.
+            We wanted a place where students, senior ICs, and execs could all
+            drop in for honest 1:1 conversations without it feeling like a pitch
+            or a panel.
+          </p>
+          <p className="max-w-2xl text-sm text-[#d3dcec] sm:text-base">
+            Every session is grounded in identity&mdash;people sign in with
+            LinkedIn or GitHub&mdash;but the vibe is closer to a good hallway
+            track at a conference than a formal interview loop.
           </p>
         </section>
 
-        <section className="mt-12 grid gap-6 text-sm text-slate-300 sm:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <h2 className="text-base font-semibold text-slate-50">
+        <section className="mt-12 grid gap-6 text-sm text-[#d3dcec] sm:grid-cols-2">
+          <div className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+            <h2 className="text-base font-semibold text-[#f8f3e8]">
               Who this is for
             </h2>
             <ul className="space-y-2 text-xs sm:text-sm">
-              <li>Developers who want to talk shop beyond their current team.</li>
-              <li>Students breaking into tech and looking for guidance.</li>
-              <li>Founders and indie hackers looking for feedback or co-founders.</li>
-              <li>Recruiters and hiring managers who actually understand tech.</li>
+              <li>Students and all‑nighters looking for real talk, not generic advice.</li>
+              <li>Engineers and designers who miss conference hallway chats.</li>
+              <li>Founders and PMs looking for signal outside their own bubble.</li>
+              <li>
+                Talent partners, HR, and hiring managers who want to listen before
+                they pitch.
+              </li>
             </ul>
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <h2 className="text-base font-semibold text-slate-50">
+          <div className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+            <h2 className="text-base font-semibold text-[#f8f3e8]">
               What we&apos;re building toward
             </h2>
             <ul className="space-y-2 text-xs sm:text-sm">
-              <li>Fast, relevant matches based on skills and interests.</li>
-              <li>Tools for mentors and communities to host office hours.</li>
-              <li>A safer default for &quot;meeting people on the internet.&quot;</li>
-              <li>Clear controls so you decide what to share and when.</li>
+              <li>Fast, relevant matches based on skills, interests, and intent.</li>
+              <li>Lightweight “office hours” for founders, mentors, and hiring teams.</li>
+              <li>A healthier default for “meeting people on the internet.”</li>
+              <li>Controls so you decide what to share, and when to step away.</li>
             </ul>
           </div>
         </section>
 
-        <section className="mt-12 space-y-4 text-xs text-slate-400 sm:text-sm">
-          <h2 className="text-sm font-semibold text-slate-100">
-            Privacy & terms (early version)
+        <section className="mt-12 space-y-4 text-xs text-[#9aa2c2] sm:text-sm">
+          <h2 className="text-sm font-semibold text-[#f8f3e8]">
+            Privacy & terms (early draft)
           </h2>
           <p>
-            In this early phase, we&apos;re focused on building the core
-            product. As we get closer to a public launch, this page will expand
-            into a full privacy policy and terms of use, written in plain
-            language.
+            We keep things simple: we collect only what we need to run sessions,
+            keep people safe, and improve matching. As we approach a broader
+            launch, this page will grow into a full privacy policy and terms of
+            use written in plain language.
           </p>
           <p>
-            The core principles are simple: collect the minimum data needed to
-            make good matches, protect it carefully, and give you clear options
-            to control or delete your information.
+            You&apos;ll always have options to see what we know about you,
+            request changes, or delete your data entirely.
           </p>
         </section>
       </main>
     </div>
   );
 }
-
 
