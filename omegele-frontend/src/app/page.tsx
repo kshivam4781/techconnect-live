@@ -1,87 +1,137 @@
 export default function Home() {
   return (
     <div className="bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-50">
-      <section className="mx-auto flex min-h-[70vh] max-w-6xl flex-col items-center gap-10 px-4 py-16 text-center sm:flex-row sm:items-stretch sm:gap-16 sm:text-left">
-        <div className="flex-1 space-y-6">
-          <p className="inline-flex rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs font-medium text-slate-300 shadow-sm">
-            Built for tech folks who actually use LinkedIn & GitHub
-          </p>
-          <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-            Random 1:1 conversations{" "}
-            <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">
-              with verified tech professionals
-            </span>
-            .
-          </h1>
-          <p className="max-w-xl text-balance text-sm text-slate-300 sm:text-base">
-            TechConnect Live matches you with engineers, founders, and creators in
-            real time. Every participant signs in with LinkedIn or GitHub, so you
-            get fewer trolls and more useful conversations.
-          </p>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button className="inline-flex h-11 items-center justify-center rounded-full bg-sky-500 px-5 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-sky-400">
-              Start with LinkedIn
-            </button>
-            <button className="inline-flex h-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 px-5 text-sm font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-800">
-              Start with GitHub
-            </button>
-          </div>
-          <p className="text-xs text-slate-400">
-            OAuth only · No anonymous accounts · You stay in control of what you
-            share.
-          </p>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-40 blur-3xl">
+          <div className="bg-[radial-gradient(circle_at_top,_#38bdf81a,_transparent_55%),radial-gradient(circle_at_bottom,_#a855f71a,_transparent_55%)] h-full w-full" />
         </div>
 
-        <div className="mt-4 flex flex-1 justify-center sm:mt-0">
-          <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/70 p-4 shadow-xl shadow-sky-500/10">
-            <div className="mb-3 flex items-center justify-between text-[11px] text-slate-300">
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Matching you with
-              </span>
-              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
-                Backend · AI/ML · Career
-              </span>
-            </div>
+        <div className="mx-auto flex min-h-[72vh] max-w-6xl flex-col items-center gap-10 px-4 py-16 text-center sm:flex-row sm:items-stretch sm:gap-16 sm:text-left">
+          <div className="flex-1 space-y-6">
+            <p className="inline-flex items-center gap-2 rounded-full border border-slate-800/70 bg-slate-900/70 px-3 py-1 text-[11px] font-medium text-slate-300 shadow-sm backdrop-blur">
+              <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+            Built for tech folks who actually use LinkedIn & GitHub
+            </p>
+            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+              Meet the{" "}
+              <span className="bg-gradient-to-r from-sky-400 via-cyan-300 to-violet-400 bg-clip-text text-transparent">
+                tech internet
+              </span>{" "}
+              in real time.
+            </h1>
+            <p className="max-w-xl text-balance text-sm text-slate-300 sm:text-base">
+              TechConnect Live pairs you with engineers, founders, students, and
+              builders for spontaneous 1:1 conversations. Less small talk, more
+              real stories, ideas, and unfiltered advice.
+            </p>
 
-            <div className="grid grid-cols-2 gap-3 text-[11px] text-slate-200">
-              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  You
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button className="inline-flex h-11 items-center justify-center rounded-full bg-sky-500 px-5 text-sm font-medium text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.35)] transition hover:-translate-y-0.5 hover:bg-sky-400 hover:shadow-[0_0_28px_rgba(56,189,248,0.55)]">
+                Start with LinkedIn
+              </button>
+              <button className="inline-flex h-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 px-5 text-sm font-medium text-slate-100 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-500 hover:bg-slate-800">
+                Start with GitHub
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">
+              OAuth only · No anonymous accounts · You choose what you share.
+            </p>
+
+            <div className="mt-6 grid max-w-xl grid-cols-3 gap-3 text-left text-[11px] text-slate-300">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 px-3 py-2">
+                <p className="text-xs font-semibold text-slate-100">
+                  2,300+ minutes
                 </p>
-                <p className="text-sm font-semibold">Senior Backend Engineer</p>
-                <p className="text-[11px] text-slate-300">
-                  Looking to talk system design, scaling, and career growth.
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  LinkedIn · GitHub connected
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  of conversations in early tests
                 </p>
               </div>
-
-              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Your match
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 px-3 py-2">
+                <p className="text-xs font-semibold text-slate-100">92%</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  say they&apos;d come back for another chat
                 </p>
-                <p className="text-sm font-semibold">Staff Engineer · SF</p>
-                <p className="text-[11px] text-slate-300">
-                  “Here to chat about architecture, interviewing, and startups.”
-                </p>
-                <p className="text-[10px] text-emerald-400">
-                  Verified via LinkedIn
+              </div>
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 px-3 py-2">
+                <p className="text-xs font-semibold text-slate-100">Under 30s</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  typical time to find a match
                 </p>
               </div>
             </div>
+          </div>
 
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
-              <span>Session starts in 00:07…</span>
-              <div className="flex gap-2">
-                <button className="rounded-full bg-slate-800 px-3 py-1 text-[11px] hover:bg-slate-700">
-                  Text only
-                </button>
-                <button className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-medium text-slate-950 hover:bg-emerald-400">
-                  Join with video
-                </button>
+          <div className="mt-6 flex flex-1 justify-center sm:mt-0">
+            <div className="relative w-full max-w-md animate-[float_10s_ease-in-out_infinite] rounded-3xl border border-slate-800 bg-slate-900/80 p-4 shadow-xl shadow-sky-500/20">
+              <div className="pointer-events-none absolute -inset-px rounded-3xl border border-sky-500/20 bg-[conic-gradient(from_180deg_at_50%_0%,rgba(56,189,248,0.4),transparent_35%,rgba(129,140,248,0.4),transparent_70%,rgba(56,189,248,0.4))] opacity-0 blur-xl transition-opacity duration-500 hover:opacity-100" />
+              <div className="relative space-y-3 text-[11px] text-slate-200">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    Matching you with
+                  </span>
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
+                    Backend · AI/ML · Career
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-[10px] font-semibold">
+                        Y
+                      </span>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          You
+                        </p>
+                        <p className="text-xs font-semibold">
+                          Senior Backend Eng
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      “Let&apos;s talk architecture, scaling, and career jumps.”
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      LinkedIn · GitHub connected
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-violet-500 text-[10px] font-semibold">
+                        A
+                      </span>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                          Your match
+                        </p>
+                        <p className="text-xs font-semibold">
+                          Staff Eng · SF · ML
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      “Happy to share interview tips and startup war stories.”
+                    </p>
+                    <p className="text-[10px] text-emerald-400">
+                      Verified via LinkedIn
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+                  <span>Session starts in 00:07…</span>
+                  <div className="flex gap-2">
+                    <button className="rounded-full bg-slate-800 px-3 py-1 text-[11px] hover:bg-slate-700">
+                      Text only
+                    </button>
+                    <button className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-medium text-slate-950 hover:bg-emerald-400">
+                      Join with video
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
