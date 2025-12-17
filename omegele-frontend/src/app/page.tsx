@@ -1,12 +1,26 @@
+"use client";
+
+import { signIn, useSession, signOut } from "next-auth/react";
+
 export default function Home() {
+  const { data: session } = useSession();
+
   return (
     <div className="min-h-screen bg-[#0b1018] text-[#f8f3e8]">
       <section className="relative overflow-hidden border-b border-[#272f45]">
-        <div className="pointer-events-none absolute inset-0 opacity-40 blur-3xl">
-          <div className="h-full w-full bg-[radial-gradient(circle_at_0_0,#f9731612_0,#05000e_45%),radial-gradient(circle_at_100%_100%,#bef26421_0,#05000e_50%)]" />
+        <div className="absolute inset-0">
+          <video
+            className="h-full w-full object-cover"
+            src="/hero.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#d4d4d433] via-[#02061799] to-[#020617ee] backdrop-blur-sm" />
         </div>
 
-        <div className="mx-auto flex min-h-[72vh] max-w-6xl flex-col items-center gap-10 px-4 py-16 text-center sm:flex-row sm:items-stretch sm:gap-16 sm:text-left">
+        <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col items-center gap-10 px-4 py-16 text-center sm:flex-row sm:items-stretch sm:gap-16 sm:text-left">
           <div className="flex-1 space-y-6">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#3b435a] bg-[#131827] px-3 py-1 text-[11px] font-medium text-[#d3dcec] shadow-sm backdrop-blur">
               <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
@@ -25,17 +39,52 @@ export default function Home() {
               real stories, ideas, and unfiltered advice.
             </p>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_34px_rgba(250,204,21,0.7)]">
-                Start with LinkedIn
-              </button>
-              <button className="inline-flex h-11 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-5 text-sm font-medium text-[#f8f3e8] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6471a3] hover:bg-[#151f35]">
-                Start with GitHub
-              </button>
-            </div>
-            <p className="text-xs text-[#9aa2c2]">
-              OAuth only · No anonymous accounts · You choose what you share.
-            </p>
+            {session ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-[#343d55] bg-[#050816] px-4 py-3 text-left text-xs text-[#d3dcec]">
+                  <p className="text-[11px] font-semibold text-[#bef264]">
+                    You&apos;re in.
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-[#f8f3e8]">
+                    Signed in as{" "}
+                    <span className="font-semibold">
+                      {session.user?.name || session.user?.email}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#9aa2c2]">
+                    Next step: we&apos;ll use this identity to match you with
+                    other verified tech folks.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <button
+                    onClick={() => signOut()}
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-5 text-sm font-medium text-[#f8f3e8] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6471a3] hover:bg-[#151f35]"
+                  >
+                    Sign out
+                  </button>
+                </div>
+                <p className="text-xs text-[#9aa2c2]">
+                  OAuth only · No anonymous accounts · You choose what you
+                  share.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <button
+                    onClick={() => signIn("github")}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_34px_rgba(250,204,21,0.7)]"
+                  >
+                    Start with GitHub
+                  </button>
+                </div>
+                <p className="text-xs text-[#9aa2c2]">
+                  OAuth only · No anonymous accounts · You choose what you
+                  share.
+                </p>
+              </>
+            )}
 
             <div className="mt-6 grid max-w-xl grid-cols-3 gap-3 text-left text-[11px] text-[#d3dcec]">
               <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
