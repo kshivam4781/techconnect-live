@@ -262,7 +262,9 @@ export default function OnboardingPage() {
                     onChange={(e) => setGoals(e.target.value)}
                     rows={3}
                     className="w-full resize-none rounded-md border border-[#3b435a] bg-[#050816] px-3 py-2 text-xs text-[#e5e7eb] outline-none focus:border-[#ffd447]"
-                    placeholder="e.g. \"Mock interviews for backend roles\", \"Honest feedback on startup ideas\", \"Chat with other self‑taught devs\""
+                    placeholder={
+                      'e.g. "Mock interviews for backend roles", "Honest feedback on startup ideas", "Chat with other self-taught devs"'
+                    }
                   />
                 </div>
               </div>
