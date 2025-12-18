@@ -30,8 +30,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#050710] text-[#f8f3e8]`}
       >
         <Providers>
-          <div className="flex min-h-screen flex-col bg-[#050710]">
-            <header className="border-b border-[#262a3d] bg-[#050813]/90 backdrop-blur">
+        <div className="flex min-h-screen flex-col bg-[#050710]">
+          <header className="border-b border-[#262a3d] bg-[#050813]/90 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#ffd44766] bg-[#0b1018] text-xs font-bold tracking-[0.16em] text-[#ffd447] shadow-[0_0_24px_rgba(250,204,21,0.35)]">
@@ -62,7 +62,7 @@ export default function RootLayout({
               </nav>
             </div>
           </header>
-            <main className="flex-1">{children}</main>
+          <main className="flex-1">{children}</main>
           <footer className="border-t border-[#262a3d] bg-[#04050c] pt-10 pb-4 text-[13px] text-[#8b92b0]">
             <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4">
               <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -164,8 +164,8 @@ export default function RootLayout({
                 </div>
               </div>
             </div>
-            </footer>
-          </div>
+          </footer>
+        </div>
         </Providers>
       </body>
     </html>

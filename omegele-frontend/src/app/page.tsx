@@ -56,13 +56,13 @@ export default function Home() {
                     other verified tech folks.
                   </p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <button
                     onClick={() => signOut()}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-5 text-sm font-medium text-[#f8f3e8] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6471a3] hover:bg-[#151f35]"
                   >
                     Sign out
-                  </button>
+              </button>
                 </div>
                 <p className="text-xs text-[#9aa2c2]">
                   OAuth only · No anonymous accounts · You choose what you
@@ -76,13 +76,13 @@ export default function Home() {
                     onClick={() => signIn("github")}
                     className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_34px_rgba(250,204,21,0.7)]"
                   >
-                    Start with GitHub
-                  </button>
-                </div>
-                <p className="text-xs text-[#9aa2c2]">
+                Start with GitHub
+              </button>
+            </div>
+            <p className="text-xs text-[#9aa2c2]">
                   OAuth only · No anonymous accounts · You choose what you
                   share.
-                </p>
+            </p>
               </>
             )}
 
