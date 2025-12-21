@@ -42,6 +42,8 @@ export default function MatchPage() {
   const [flagId, setFlagId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; userId: string; message: string; timestamp: Date; isOwn: boolean }>>([]);
   const [chatInput, setChatInput] = useState("");
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -548,6 +550,8 @@ export default function MatchPage() {
       setOtherUserId(null);
       setOtherUserInfo(null);
       setCallTimer(0);
+      setShowInfoPanel(false);
+      setShowChatPanel(false);
 
       setTimeout(() => {
         setMatchStatus("idle");
@@ -575,6 +579,8 @@ export default function MatchPage() {
       setOtherUserId(null);
       setOtherUserInfo(null);
       setCallTimer(0);
+      setShowInfoPanel(false);
+      setShowChatPanel(false);
     } catch (error) {
       console.error("Error skipping:", error);
     }
@@ -1103,9 +1109,9 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden m-0 p-0">
-          {/* Column 1: Video Area */}
-          <div className="flex-1 relative bg-[#0b1018] min-h-0 flex items-center justify-center p-2 sm:p-4 border-b lg:border-b-0 lg:border-r border-[#272f45]">
+        <div className="relative h-full w-full overflow-hidden m-0 p-0">
+          {/* Main Video Area - Full Screen */}
+          <div className="h-full w-full relative bg-[#0b1018] flex items-center justify-center p-2 sm:p-4">
             {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
             <div className="w-full max-w-4xl grid grid-cols-1 gap-2 sm:gap-4">
               {/* Remote Video */}
@@ -1181,6 +1187,55 @@ export default function MatchPage() {
             {/* Call Timer - Top Center */}
             <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-10">
               {formatTime(callTimer)}
+            </div>
+
+            {/* Side Panel Toggle Buttons - Right Side */}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+              {/* User Info Button */}
+              <button
+                onClick={() => {
+                  setShowInfoPanel(!showInfoPanel);
+                  if (showInfoPanel) setShowChatPanel(false);
+                }}
+                className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border transition ${
+                  showInfoPanel
+                    ? "border-[#ffd447] bg-[#ffd447] text-[#18120b]"
+                    : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] active:border-[#6471a3] active:bg-[#151f35]"
+                }`}
+                title="User Information"
+              >
+                <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </button>
+
+              {/* Chat Button */}
+              <button
+                onClick={() => {
+                  setShowChatPanel(!showChatPanel);
+                  if (showChatPanel) setShowInfoPanel(false);
+                }}
+                className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border transition ${
+                  showChatPanel
+                    ? "border-[#ffd447] bg-[#ffd447] text-[#18120b]"
+                    : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] active:border-[#6471a3] active:bg-[#151f35]"
+                }`}
+                title="Chat"
+              >
+                <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </button>
             </div>
 
             {/* Controls */}
@@ -1296,114 +1351,153 @@ export default function MatchPage() {
             </div>
           </div>
 
-          {/* Column 2: Chat Area */}
-          <div className="flex-1 lg:flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-[#272f45] bg-[#0b1018] min-w-0 max-h-[40vh] lg:max-h-none">
-            <div className="flex-1 flex flex-col h-full min-h-0">
-              {/* Chat Header */}
-              <div className="border-b border-[#272f45] p-2 sm:p-3 md:p-4 flex-shrink-0">
-                <h3 className="text-xs sm:text-sm font-medium text-[#f8f3e8]">Chat</h3>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 min-h-0">
-                {chatMessages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-xs sm:text-sm text-[#9aa2c2]">No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  chatMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 ${
-                          msg.isOwn
-                            ? "bg-[#ffd447] text-[#18120b]"
-                            : "bg-[#1f2937] text-[#f8f3e8]"
-                        }`}
-                      >
-                        <p className="text-xs sm:text-sm break-words">{msg.message}</p>
-                        <p className={`text-xs mt-0.5 sm:mt-1 ${msg.isOwn ? "text-[#18120b]/70" : "text-[#9aa2c2]"}`}>
-                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div ref={chatMessagesEndRef} />
-              </div>
-
-              {/* Chat Input */}
-              <div className="border-t border-[#272f45] p-2 sm:p-3 md:p-4 flex-shrink-0">
-                <form onSubmit={handleSendMessage} className="flex gap-1.5 sm:gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-[#f8f3e8] placeholder:text-[#9aa2c2] focus:outline-none focus:border-[#6471a3]"
-                  />
+          {/* User Info Side Panel */}
+          {showInfoPanel && (
+            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
+              <div className="h-full flex flex-col">
+                {/* Panel Header */}
+                <div className="border-b border-[#272f45] p-4 flex items-center justify-between flex-shrink-0">
+                  <h3 className="text-sm sm:text-base font-semibold text-[#f8f3e8]">User Information</h3>
                   <button
-                    type="submit"
-                    disabled={!chatInput.trim()}
-                    className="rounded-lg bg-[#ffd447] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-[#18120b] transition active:bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setShowInfoPanel(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35]"
                   >
-                    Send
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
-                </form>
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {/* Column 3: User Info */}
-          <div className="hidden lg:flex w-80 flex-col border-l border-[#272f45] bg-[#0b1018] min-w-0">
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
-              {/* Your Information */}
-              <div>
-                <h3 className="text-xs sm:text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#1f2937] text-lg sm:text-xl font-semibold">
-                      {session.user?.name?.charAt(0) || "?"}
+                {/* Panel Content */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+                  {/* Your Information */}
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-medium text-[#9aa2c2] mb-3">Your Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                          {session.user?.name?.charAt(0) || "?"}
+                        </div>
+                        <div>
+                          <p className="text-sm sm:text-base font-semibold">{session.user?.name || "User"}</p>
+                          <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-[#272f45]"></div>
+
+                  {/* Other User Information */}
+                  {otherUserInfo && (
                     <div>
-                      <p className="text-sm sm:text-base font-semibold">{session.user?.name || "User"}</p>
-                      <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                      <h4 className="text-xs sm:text-sm font-medium text-[#9aa2c2] mb-3">Matched User</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                            {otherUserInfo.showName && otherUserInfo.name ? otherUserInfo.name.charAt(0) : "?"}
+                          </div>
+                          <div>
+                            <p className="text-sm sm:text-base font-semibold">
+                              {otherUserInfo.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
+                            </p>
+                            {otherUserInfo.showName && otherUserInfo.email && (
+                              <p className="text-xs text-[#9aa2c2]">{otherUserInfo.email}</p>
+                            )}
+                            {!otherUserInfo.showName && (
+                              <p className="text-xs text-[#9aa2c2] italic">Name hidden by user</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
-
-              {/* Divider */}
-              <div className="border-t border-[#272f45]"></div>
-
-              {/* Other User Information */}
-              {otherUserInfo && (
-                <div>
-                  <h3 className="text-xs sm:text-sm font-medium text-[#9aa2c2] mb-2">Matched User</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#1f2937] text-lg sm:text-xl font-semibold">
-                        {otherUserInfo.showName && otherUserInfo.name ? otherUserInfo.name.charAt(0) : "?"}
-                      </div>
-                      <div>
-                        <p className="text-sm sm:text-base font-semibold">
-                          {otherUserInfo.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
-                        </p>
-                        {otherUserInfo.showName && otherUserInfo.email && (
-                          <p className="text-xs text-[#9aa2c2]">{otherUserInfo.email}</p>
-                        )}
-                        {!otherUserInfo.showName && (
-                          <p className="text-xs text-[#9aa2c2] italic">Name hidden by user</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
+          )}
+
+          {/* Chat Side Panel */}
+          {showChatPanel && (
+            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
+              <div className="h-full flex flex-col">
+                {/* Panel Header */}
+                <div className="border-b border-[#272f45] p-4 flex items-center justify-between flex-shrink-0">
+                  <h3 className="text-sm sm:text-base font-semibold text-[#f8f3e8]">Chat</h3>
+                  <button
+                    onClick={() => setShowChatPanel(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35]"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-xs sm:text-sm text-[#9aa2c2]">No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                            msg.isOwn
+                              ? "bg-[#ffd447] text-[#18120b]"
+                              : "bg-[#1f2937] text-[#f8f3e8]"
+                          }`}
+                        >
+                          <p className="text-sm break-words">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${msg.isOwn ? "text-[#18120b]/70" : "text-[#9aa2c2]"}`}>
+                            {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Chat Input */}
+                <div className="border-t border-[#272f45] p-4 flex-shrink-0">
+                  <form onSubmit={handleSendMessage} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm text-[#f8f3e8] placeholder:text-[#9aa2c2] focus:outline-none focus:border-[#6471a3]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim()}
+                      className="rounded-lg bg-[#ffd447] px-4 py-2 text-sm font-semibold text-[#18120b] transition active:bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Send
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Overlay when panel is open on mobile */}
+          {(showInfoPanel || showChatPanel) && (
+            <div
+              className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+              onClick={() => {
+                setShowInfoPanel(false);
+                setShowChatPanel(false);
+              }}
+            />
+          )}
         </div>
       )}
 
