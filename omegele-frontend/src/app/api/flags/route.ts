@@ -78,6 +78,33 @@ export async function POST(request: Request) {
       },
     });
 
+    // Update flag count for the flagged user
+    const updatedUser = await (prisma as any).user.update({
+      where: { id: flaggedUserId },
+      data: {
+        flagCount: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        flagCount: true,
+        isBlocked: true,
+      },
+    });
+
+    // If user reaches 5 flags, automatically block them
+    if (updatedUser.flagCount >= 5 && !updatedUser.isBlocked) {
+      await (prisma as any).user.update({
+        where: { id: flaggedUserId },
+        data: {
+          isBlocked: true,
+          blockedAt: new Date(),
+          blockedReason: `Automatically blocked after receiving ${updatedUser.flagCount} flags`,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       flag: {
@@ -90,6 +117,8 @@ export async function POST(request: Request) {
         flaggedAt: flag.flaggedAt.toISOString(),
         status: flag.status,
       },
+      flaggedUserFlagCount: updatedUser.flagCount,
+      flaggedUserIsBlocked: updatedUser.flagCount >= 5,
     });
   } catch (error: any) {
     console.error("Error creating flag:", error);

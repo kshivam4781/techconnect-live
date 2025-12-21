@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "flagCount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "isBlocked" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "blockedAt" TIMESTAMP(3),
+ADD COLUMN "blockedReason" TEXT,
+ADD COLUMN "blockedBy" TEXT;
+

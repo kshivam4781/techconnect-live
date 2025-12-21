@@ -68,6 +68,14 @@ model User {
   onboarded                    Boolean    @default(false)
   initialConversationDuration Int?       @default(60) // Duration in seconds, max 60 (1 minute)
   showName                     Boolean    @default(true) // Whether to show name to matched users
+  
+  // Flagging and blocking
+  flagCount                    Int        @default(0) // Total number of flags received (cached count)
+  isBlocked                    Boolean    @default(false) // Whether user is blocked from searching/connecting
+  blockedAt                    DateTime?  // When user was blocked
+  blockedReason                String?    // Reason for blocking
+  blockedBy                    String?    // Admin user ID who blocked this user
+  
   createdAt                   DateTime   @default(now())
   updatedAt                   DateTime   @updatedAt
   

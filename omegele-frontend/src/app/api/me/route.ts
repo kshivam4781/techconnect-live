@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { canUserSearch } from "@/lib/user-utils";
 
 export async function GET() {
   const session = await getServerSession(authOptions as any);
@@ -9,11 +10,23 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 200 });
   }
 
+  const userId = (session as any).userId;
   const user = await prisma.user.findUnique({
-    where: { id: (session as any).userId },
+    where: { id: userId },
   });
 
-  return NextResponse.json({ user });
+  // Check if user can search
+  const searchCheck = await canUserSearch(userId);
+
+  return NextResponse.json({
+    user,
+    flagStatus: {
+      canSearch: searchCheck.canSearch,
+      flagCount: searchCheck.flagCount,
+      isBlocked: searchCheck.isBlocked,
+      reason: searchCheck.reason,
+    },
+  });
 }
 
 export async function PATCH(request: Request) {

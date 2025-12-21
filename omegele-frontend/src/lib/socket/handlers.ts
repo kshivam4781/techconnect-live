@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { canUserSearch } from "@/lib/user-utils";
 import {
   addToQueue,
   removeFromQueue,
@@ -46,6 +47,17 @@ export function setupSocketHandlers(io: SocketIOServer) {
     socket.on("join-queue", async (data: { sessionId: string; mode: "VIDEO" | "TEXT" }) => {
       try {
         const { sessionId, mode } = data;
+
+        // Check if user can search (not blocked and flag count < 5)
+        const searchCheck = await canUserSearch(userId);
+        if (!searchCheck.canSearch) {
+          socket.emit("error", {
+            message: searchCheck.reason || "You cannot start a search at this time",
+            flagCount: searchCheck.flagCount,
+            isBlocked: searchCheck.isBlocked,
+          });
+          return;
+        }
 
         // Get user data
         const user = await prisma.user.findUnique({

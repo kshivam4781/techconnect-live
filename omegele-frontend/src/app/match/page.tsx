@@ -48,6 +48,12 @@ export default function MatchPage() {
   const [chatInput, setChatInput] = useState("");
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [flagStatus, setFlagStatus] = useState<{
+    canSearch: boolean;
+    flagCount: number;
+    isBlocked: boolean;
+    reason?: string;
+  } | null>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -180,6 +186,11 @@ export default function MatchPage() {
           }
           setConversationDuration(data.user.initialConversationDuration ?? 60);
           setShowName(data.user.showName ?? true);
+          
+          // Set flag status
+          if (data.flagStatus) {
+            setFlagStatus(data.flagStatus);
+          }
         }
       } catch (error) {
         console.error("Error fetching user config:", error);
@@ -282,12 +293,14 @@ export default function MatchPage() {
   // Function to get reverse geocoding (address from coordinates)
   const getAddressFromCoordinates = async (latitude: number, longitude: number): Promise<string> => {
     try {
-      // Using OpenStreetMap Nominatim API (free, no API key required)
+      // Using OpenStreetMap Nominatim API with better parameters for accuracy
+      // Using zoom=18 for maximum detail and addressdetails=1 for full address components
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&extratags=1&namedetails=1`,
         {
           headers: {
-            'User-Agent': 'TechConnect-App' // Required by Nominatim
+            'User-Agent': 'TechConnect-App/1.0', // Required by Nominatim
+            'Accept-Language': 'en-US,en;q=0.9', // Request English language results
           }
         }
       );
@@ -300,30 +313,57 @@ export default function MatchPage() {
       
       if (data.address) {
         const addr = data.address;
-        // Build a readable address string
+        // Build a comprehensive, accurate address string
         const parts: string[] = [];
         
-        if (addr.road) parts.push(addr.road);
+        // Street address components (most specific first)
         if (addr.house_number) parts.push(addr.house_number);
-        if (addr.city || addr.town || addr.village) {
-          parts.push(addr.city || addr.town || addr.village);
+        if (addr.road || addr.street || addr.pedestrian) {
+          parts.push(addr.road || addr.street || addr.pedestrian);
         }
-        if (addr.state) parts.push(addr.state);
-        if (addr.country) parts.push(addr.country);
-        if (addr.postcode) parts.push(addr.postcode);
+        if (addr.suburb || addr.neighbourhood || addr.city_district) {
+          parts.push(addr.suburb || addr.neighbourhood || addr.city_district);
+        }
         
-        return parts.length > 0 ? parts.join(', ') : `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        // City/town/village
+        if (addr.city || addr.town || addr.village || addr.municipality) {
+          parts.push(addr.city || addr.town || addr.village || addr.municipality);
+        }
+        
+        // State/province
+        if (addr.state || addr.region || addr.province) {
+          parts.push(addr.state || addr.region || addr.province);
+        }
+        
+        // Country
+        if (addr.country) {
+          parts.push(addr.country);
+        }
+        
+        // Postal code
+        if (addr.postcode) {
+          parts.push(addr.postcode);
+        }
+        
+        // If we have a display name from Nominatim, use it as it's usually more accurate
+        if (data.display_name && parts.length > 0) {
+          // Use display_name but ensure it includes our key components
+          return data.display_name;
+        }
+        
+        return parts.length > 0 ? parts.join(', ') : `${latitude.toFixed(8)}, ${longitude.toFixed(8)}`;
       }
       
-      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      // Fallback to coordinates with higher precision
+      return `${latitude.toFixed(8)}, ${longitude.toFixed(8)}`;
     } catch (error) {
       console.error('Error getting address:', error);
-      // Return coordinates as fallback
-      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      // Return coordinates with higher precision as fallback
+      return `${latitude.toFixed(8)}, ${longitude.toFixed(8)}`;
     }
   };
 
-  // Function to request user location
+  // Function to request user location with high accuracy
   const requestUserLocation = async (): Promise<{ latitude: number; longitude: number; address: string } | null> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
@@ -333,51 +373,194 @@ export default function MatchPage() {
       }
 
       const options: PositionOptions = {
-        enableHighAccuracy: true,
-        timeout: 10000,
+        enableHighAccuracy: true, // Use GPS for better accuracy
+        timeout: 20000, // Increased timeout to 20 seconds for better accuracy
         maximumAge: 0, // Always get fresh location
       };
 
-      navigator.geolocation.getCurrentPosition(
+      let bestPosition: GeolocationPosition | null = null;
+      let watchId: number | null = null;
+      let attempts = 0;
+      let resolved = false; // Track if we've already resolved
+      const maxAttempts = 15; // Try up to 15 times to get better accuracy
+      const minAccuracy = 30; // Target accuracy in meters (30m is very good for most use cases)
+
+      // Use watchPosition to continuously get better accuracy
+      watchId = navigator.geolocation.watchPosition(
         async (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("Location obtained:", latitude, longitude);
+          if (resolved) return; // Don't process if already resolved
           
-          // Get address from coordinates
-          const address = await getAddressFromCoordinates(latitude, longitude);
-          console.log("Address:", address);
-          
-          const locationData = {
-            latitude,
-            longitude,
-            address,
-          };
-          
-          setUserLocation(locationData);
-          setLocationError(null);
-          resolve(locationData);
+          attempts++;
+          const accuracy = position.coords.accuracy;
+          console.log(`Location attempt ${attempts}:`, {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: `${accuracy.toFixed(2)}m`,
+          });
+
+          // Keep track of the best position (most accurate)
+          if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+            bestPosition = position;
+          }
+
+          // If we have good accuracy or reached max attempts, use this position
+          if (accuracy <= minAccuracy || attempts >= maxAttempts) {
+            resolved = true;
+            
+            // Stop watching
+            if (watchId !== null) {
+              navigator.geolocation.clearWatch(watchId);
+              watchId = null;
+            }
+
+            const { latitude, longitude } = position.coords;
+            console.log("Final location obtained:", {
+              latitude,
+              longitude,
+              accuracy: `${position.coords.accuracy.toFixed(2)}m`,
+            });
+            
+            // Get address from coordinates
+            const address = await getAddressFromCoordinates(latitude, longitude);
+            console.log("Address:", address);
+            
+            const locationData = {
+              latitude,
+              longitude,
+              address,
+            };
+            
+            setUserLocation(locationData);
+            setLocationError(null);
+            resolve(locationData);
+          }
         },
         (error) => {
-          console.error("Location error:", error);
-          let errorMessage = "Failed to get location";
+          if (resolved) return; // Don't process if already resolved
           
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = "Location permission denied. Please enable location access to continue.";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = "Location information unavailable.";
-              break;
-            case error.TIMEOUT:
-              errorMessage = "Location request timed out.";
-              break;
+          // Stop watching on error
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
           }
           
-          setLocationError(errorMessage);
-          resolve(null);
+          // If watchPosition fails, try getCurrentPosition as fallback
+          if (attempts === 0) {
+            console.log("watchPosition failed, trying getCurrentPosition as fallback");
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                if (resolved) return;
+                resolved = true;
+                
+                const { latitude, longitude } = position.coords;
+                console.log("Fallback location obtained:", {
+                  latitude,
+                  longitude,
+                  accuracy: `${position.coords.accuracy.toFixed(2)}m`,
+                });
+                
+                const address = await getAddressFromCoordinates(latitude, longitude);
+                console.log("Address:", address);
+                
+                const locationData = {
+                  latitude,
+                  longitude,
+                  address,
+                };
+                
+                setUserLocation(locationData);
+                setLocationError(null);
+                resolve(locationData);
+              },
+              (fallbackError) => {
+                if (resolved) return;
+                resolved = true;
+                
+                console.error("Location error:", fallbackError);
+                let errorMessage = "Failed to get location";
+                
+                switch (fallbackError.code) {
+                  case fallbackError.PERMISSION_DENIED:
+                    errorMessage = "Location permission denied. Please enable location access to continue.";
+                    break;
+                  case fallbackError.POSITION_UNAVAILABLE:
+                    errorMessage = "Location information unavailable.";
+                    break;
+                  case fallbackError.TIMEOUT:
+                    errorMessage = "Location request timed out.";
+                    break;
+                }
+                
+                setLocationError(errorMessage);
+                resolve(null);
+              },
+              options
+            );
+          } else {
+            // If we have a best position from watchPosition, use it
+            if (bestPosition && !resolved) {
+              resolved = true;
+              const { latitude, longitude } = bestPosition.coords;
+              getAddressFromCoordinates(latitude, longitude).then((address) => {
+                const locationData = {
+                  latitude,
+                  longitude,
+                  address,
+                };
+                setUserLocation(locationData);
+                setLocationError(null);
+                resolve(locationData);
+              });
+            } else if (!resolved) {
+              resolved = true;
+              console.error("Location error:", error);
+              let errorMessage = "Failed to get location";
+              
+              switch (error.code) {
+                case error.PERMISSION_DENIED:
+                  errorMessage = "Location permission denied. Please enable location access to continue.";
+                  break;
+                case error.POSITION_UNAVAILABLE:
+                  errorMessage = "Location information unavailable.";
+                  break;
+                case error.TIMEOUT:
+                  errorMessage = "Location request timed out.";
+                  break;
+              }
+              
+              setLocationError(errorMessage);
+              resolve(null);
+            }
+          }
         },
         options
       );
+
+      // Set a maximum timeout to stop watching after 25 seconds
+      const timeoutId = setTimeout(() => {
+        if (!resolved && watchId !== null) {
+          resolved = true;
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+          
+          if (bestPosition) {
+            const { latitude, longitude } = bestPosition.coords;
+            getAddressFromCoordinates(latitude, longitude).then((address) => {
+              const locationData = {
+                latitude,
+                longitude,
+                address,
+              };
+              setUserLocation(locationData);
+              setLocationError(null);
+              resolve(locationData);
+            });
+          } else {
+            setLocationError("Location request timed out. Please try again.");
+            resolve(null);
+          }
+        }
+      }, 25000);
     });
   };
 
@@ -488,13 +671,13 @@ export default function MatchPage() {
             setOtherUserLocation({
               latitude: match.user2Latitude,
               longitude: match.user2Longitude,
-              address: match.user2Address || `${match.user2Latitude.toFixed(6)}, ${match.user2Longitude.toFixed(6)}`,
+              address: match.user2Address || `${match.user2Latitude.toFixed(8)}, ${match.user2Longitude.toFixed(8)}`,
             });
           } else if (!isUser1 && match.user1Latitude && match.user1Longitude) {
             setOtherUserLocation({
               latitude: match.user1Latitude,
               longitude: match.user1Longitude,
-              address: match.user1Address || `${match.user1Latitude.toFixed(6)}, ${match.user1Longitude.toFixed(6)}`,
+              address: match.user1Address || `${match.user1Latitude.toFixed(8)}, ${match.user1Longitude.toFixed(8)}`,
             });
           }
         }
@@ -544,6 +727,38 @@ export default function MatchPage() {
       setChatMessages([]);
     }
   }, [matchStatus]);
+
+  // Handle socket errors (e.g., blocked users)
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleSocketError = (error: { message: string; flagCount?: number; isBlocked?: boolean }) => {
+      console.error("Socket error:", error);
+      
+      // If user is blocked, update flag status
+      if (error.isBlocked || error.message.includes("cannot start a search")) {
+        setFlagStatus({
+          canSearch: false,
+          flagCount: error.flagCount || 0,
+          isBlocked: true,
+          reason: error.message || "You cannot start a search at this time. Please contact support for assistance.",
+        });
+        
+        // Go back to idle state if searching
+        if (matchStatus === "searching" || matchStatus === "ready") {
+          setMatchStatus("idle");
+        }
+        
+        alert(error.message || "You cannot start a search at this time. Please contact support for assistance.");
+      }
+    };
+
+    socket.on("error", handleSocketError);
+
+    return () => {
+      socket.off("error", handleSocketError);
+    };
+  }, [socket, matchStatus]);
 
   // Auto-rematch when other user disconnects or call ends
   useEffect(() => {
@@ -785,6 +1000,12 @@ export default function MatchPage() {
 
   const handleStartSearch = async () => {
     try {
+      // Check flag status before starting search
+      if (flagStatus && !flagStatus.canSearch) {
+        alert(flagStatus.reason || "You cannot start a search at this time. Please contact support for assistance.");
+        return;
+      }
+
       // Request location before starting search
       setLocationError(null);
       const location = await requestUserLocation();
@@ -809,7 +1030,20 @@ export default function MatchPage() {
       });
 
       if (!sessionRes.ok) {
-        throw new Error("Failed to start session");
+        const errorData = await sessionRes.json().catch(() => ({}));
+        if (sessionRes.status === 403 && errorData.isBlocked) {
+          // User is blocked, update flag status and show message
+          setFlagStatus({
+            canSearch: false,
+            flagCount: errorData.flagCount || 0,
+            isBlocked: true,
+            reason: errorData.error || "You cannot start a search at this time.",
+          });
+          alert(errorData.error || "You cannot start a search at this time. Please contact support for assistance.");
+          setMatchStatus("idle");
+          return;
+        }
+        throw new Error(errorData.error || "Failed to start session");
       }
 
       const sessionData = await sessionRes.json();
@@ -1245,6 +1479,28 @@ export default function MatchPage() {
       {matchStatus === "idle" && (
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 overflow-y-auto min-h-0">
           <div className="mx-auto max-w-2xl w-full space-y-4 sm:space-y-6 text-center">
+            {/* Blocked Message */}
+            {flagStatus && !flagStatus.canSearch && (
+              <div className="rounded-xl sm:rounded-2xl border border-red-500/50 bg-red-500/10 p-4 sm:p-6 text-left">
+                <div className="flex items-start gap-3">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h3 className="text-sm sm:text-base font-semibold text-red-400 mb-1">Account Suspended</h3>
+                    <p className="text-xs sm:text-sm text-red-300/90 mb-2">
+                      {flagStatus.reason || "Your account has been temporarily suspended. Please contact support for assistance."}
+                    </p>
+                    {flagStatus.flagCount > 0 && (
+                      <p className="text-xs text-red-300/70">
+                        Flag count: {flagStatus.flagCount}/5
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
                 Start a conversation
@@ -1279,7 +1535,8 @@ export default function MatchPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <button
                     onClick={() => handleSelectMode("VIDEO")}
-                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b]"
+                    disabled={flagStatus ? !flagStatus.canSearch : false}
+                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg
                       className="h-7 w-7 sm:h-8 sm:w-8 text-[#ffd447]"
@@ -1300,7 +1557,8 @@ export default function MatchPage() {
 
                   <button
                     onClick={() => handleSelectMode("AUDIO")}
-                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b]"
+                    disabled={flagStatus ? !flagStatus.canSearch : false}
+                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg
                       className="h-7 w-7 sm:h-8 sm:w-8 text-[#bef264]"
@@ -1356,6 +1614,28 @@ export default function MatchPage() {
       {/* Ready State - Video Preview with Start Button */}
       {matchStatus === "ready" && (
         <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden min-h-0">
+          {/* Blocked Message Banner */}
+          {flagStatus && !flagStatus.canSearch && (
+            <div className="w-full border-b border-red-500/50 bg-red-500/10 p-3 sm:p-4">
+              <div className="flex items-start gap-3 max-w-7xl mx-auto">
+                <svg className="h-5 w-5 sm:h-6 sm:w-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm sm:text-base font-semibold text-red-400 mb-1">Account Suspended</h3>
+                  <p className="text-xs sm:text-sm text-red-300/90">
+                    {flagStatus.reason || "Your account has been temporarily suspended. Please contact support for assistance."}
+                  </p>
+                  {flagStatus.flagCount > 0 && (
+                    <p className="text-xs text-red-300/70 mt-1">
+                      Flag count: {flagStatus.flagCount}/5
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Left Side - Video Preview */}
           <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-2 sm:p-4 min-h-0">
             {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
@@ -1410,7 +1690,8 @@ export default function MatchPage() {
               {/* Start Searching Button - Mobile only */}
               <button
                 onClick={handleStartSearch}
-                className="md:hidden inline-flex h-8 sm:h-9 items-center justify-center rounded-full bg-[#ffd447] px-3 sm:px-4 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+                disabled={flagStatus ? !flagStatus.canSearch : false}
+                className="md:hidden inline-flex h-8 sm:h-9 items-center justify-center rounded-full bg-[#ffd447] px-3 sm:px-4 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500"
               >
                 Start Searching
               </button>
@@ -1431,7 +1712,8 @@ export default function MatchPage() {
               
               <button
                 onClick={handleStartSearch}
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+                disabled={flagStatus ? !flagStatus.canSearch : false}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500"
               >
                 Start Searching
               </button>
@@ -1590,7 +1872,7 @@ export default function MatchPage() {
                           <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
                           <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
                           <p className="text-xs text-[#64748b] mt-1">
-                            {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                            {userLocation.latitude.toFixed(8)}, {userLocation.longitude.toFixed(8)}
                           </p>
                         </div>
                       </div>
@@ -1968,7 +2250,7 @@ export default function MatchPage() {
                           <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
                           <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
                           <p className="text-xs text-[#64748b] mt-1">
-                            {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                            {userLocation.latitude.toFixed(8)}, {userLocation.longitude.toFixed(8)}
                           </p>
                         </div>
                       </div>
@@ -2012,7 +2294,7 @@ export default function MatchPage() {
                             <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
                             <p className="text-xs text-[#f8f3e8] break-words">{otherUserLocation.address}</p>
                             <p className="text-xs text-[#64748b] mt-1">
-                              {otherUserLocation.latitude.toFixed(6)}, {otherUserLocation.longitude.toFixed(6)}
+                              {otherUserLocation.latitude.toFixed(8)}, {otherUserLocation.longitude.toFixed(8)}
                             </p>
                           </div>
                         </div>
@@ -2067,7 +2349,7 @@ export default function MatchPage() {
                               <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
                               <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
                               <p className="text-xs text-[#64748b] mt-1">
-                                {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                                {userLocation.latitude.toFixed(8)}, {userLocation.longitude.toFixed(8)}
                               </p>
                             </div>
                           </div>
@@ -2111,7 +2393,7 @@ export default function MatchPage() {
                                 <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
                                 <p className="text-xs text-[#f8f3e8] break-words">{otherUserLocation.address}</p>
                                 <p className="text-xs text-[#64748b] mt-1">
-                                  {otherUserLocation.latitude.toFixed(6)}, {otherUserLocation.longitude.toFixed(6)}
+                                  {otherUserLocation.latitude.toFixed(8)}, {otherUserLocation.longitude.toFixed(8)}
                                 </p>
                               </div>
                             </div>
