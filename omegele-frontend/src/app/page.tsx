@@ -170,9 +170,9 @@ export default function Home() {
               </>
             )}
 
-            <div className="mt-6 grid max-w-xl grid-cols-3 gap-3 text-left text-[11px] text-[#d3dcec]">
-              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
-                <p className="text-xs font-semibold text-[#f8f3e8]">
+            <div className="mt-6 grid max-w-xl grid-cols-2 gap-4 text-left">
+              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
+                <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
                   {stats ? (
                     <>
                       {stats.totalRegisteredUsers.toLocaleString()}
@@ -182,38 +182,23 @@ export default function Home() {
                     "—"
                   )}
                 </p>
-                <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
+                <p className="mt-1 text-xs sm:text-sm text-[#9aa2c2]">
                   registered users
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
-                <p className="text-xs font-semibold text-[#f8f3e8]">
+              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
+                <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
                   {stats ? (
                     <>
                       {stats.totalActive}
-                      <span className="ml-1 inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
+                      <span className="ml-2 inline-flex h-2 w-2 animate-pulse rounded-full bg-[#bef264]" />
                     </>
                   ) : (
                     "—"
                   )}
                 </p>
-                <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
+                <p className="mt-1 text-xs sm:text-sm text-[#9aa2c2]">
                   users active now
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
-                <p className="text-xs font-semibold text-[#f8f3e8]">
-                  {stats ? (
-                    <>
-                      {stats.totalOnline}
-                      <span className="ml-1 inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </p>
-                <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
-                  users online
                 </p>
               </div>
             </div>
