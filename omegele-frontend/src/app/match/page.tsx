@@ -29,6 +29,7 @@ export default function MatchPage() {
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [matchTimer, setMatchTimer] = useState(0);
   const [callTimer, setCallTimer] = useState(0);
+  const [conversationTimer, setConversationTimer] = useState<number | null>(null);
   const [matchingMessageIndex, setMatchingMessageIndex] = useState(0);
   const [conversationDuration, setConversationDuration] = useState<number>(60);
   const [showName, setShowName] = useState<boolean>(true);
@@ -94,6 +95,7 @@ export default function MatchPage() {
             setOtherUserId(null);
             setOtherUserInfo(null);
             setCallTimer(0);
+            setConversationTimer(null);
             setShowInfoPanel(false);
             setShowChatPanel(false);
             setChatMessages([]);
@@ -222,11 +224,31 @@ export default function MatchPage() {
     };
   }, [matchStatus]);
 
-  // Timer for call
+  // Timer for call (counts up) and conversation duration (counts down)
   useEffect(() => {
     if (matchStatus === "in-call") {
+      // Initialize conversation timer when call starts
+      if (conversationTimer === null) {
+        setConversationTimer(conversationDuration);
+      }
+      
       callIntervalRef.current = setInterval(() => {
         setCallTimer((prev) => prev + 1);
+        setConversationTimer((prev) => {
+          if (prev !== null && prev > 0) {
+            const newValue = prev - 1;
+            // Auto-trigger next match when timer reaches 0
+            if (newValue === 0 && !isEndingCallRef.current && handleNextMatchRef.current) {
+              console.log("Conversation duration reached, automatically moving to next match");
+              // Use setTimeout to avoid state update during render
+              setTimeout(() => {
+                handleNextMatchRef.current?.();
+              }, 100);
+            }
+            return newValue;
+          }
+          return prev;
+        });
       }, 1000);
     } else {
       if (callIntervalRef.current) {
@@ -234,6 +256,7 @@ export default function MatchPage() {
         callIntervalRef.current = null;
       }
       setCallTimer(0);
+      setConversationTimer(null);
     }
 
     return () => {
@@ -241,12 +264,16 @@ export default function MatchPage() {
         clearInterval(callIntervalRef.current);
       }
     };
-  }, [matchStatus]);
+  }, [matchStatus, conversationDuration, conversationTimer]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatCountdown = (seconds: number) => {
+    return `${seconds}s`;
   };
 
   // Debug: Log socket connection status
@@ -260,6 +287,8 @@ export default function MatchPage() {
   const hasJoinedQueueRef = useRef(false);
   // Track if we're ending the call ourselves to prevent auto-rematch
   const isEndingCallRef = useRef(false);
+  // Store handleNextMatch in ref to avoid dependency issues
+  const handleNextMatchRef = useRef<(() => Promise<void>) | null>(null);
 
   // Auto-retry joining queue when socket connects if we're searching
   useEffect(() => {
@@ -363,6 +392,7 @@ export default function MatchPage() {
         setOtherUserId(null);
         setOtherUserInfo(null);
         setCallTimer(0);
+        setConversationTimer(null);
         setShowInfoPanel(false);
         setShowChatPanel(false);
         setChatMessages([]);
@@ -737,6 +767,7 @@ export default function MatchPage() {
       setOtherUserId(null);
       setOtherUserInfo(null);
       setCallTimer(0);
+      setConversationTimer(null);
       setShowInfoPanel(false);
       setShowChatPanel(false);
 
@@ -770,6 +801,7 @@ export default function MatchPage() {
       setOtherUserId(null);
       setOtherUserInfo(null);
       setCallTimer(0);
+      setConversationTimer(null);
       setShowInfoPanel(false);
       setShowChatPanel(false);
       
@@ -801,6 +833,7 @@ export default function MatchPage() {
       setOtherUserId(null);
       setOtherUserInfo(null);
       setCallTimer(0);
+      setConversationTimer(null);
       setShowInfoPanel(false);
       setShowChatPanel(false);
       setChatMessages([]);
@@ -852,6 +885,11 @@ export default function MatchPage() {
       isEndingCallRef.current = false;
     }
   };
+
+  // Store handleNextMatch in ref so it can be called from timer
+  useEffect(() => {
+    handleNextMatchRef.current = handleNextMatch;
+  }, [handleNextMatch]);
 
   const handleFlag = async () => {
     if (!currentMatchId || !otherUserId) return;
@@ -1452,9 +1490,19 @@ export default function MatchPage() {
               </div>
             </div>
 
-            {/* Call Timer - Top Center */}
-            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-10">
-              {formatTime(callTimer)}
+            {/* Conversation Timer - Top Center */}
+            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-10 flex items-center gap-2">
+              {conversationTimer !== null && conversationTimer > 0 ? (
+                <>
+                  <span className={conversationTimer <= 10 ? "text-red-400 animate-pulse" : "text-[#ffd447]"}>
+                    {formatCountdown(conversationTimer)}
+                  </span>
+                  <span className="text-[#9aa2c2]">•</span>
+                  <span className="text-[#9aa2c2]">{formatTime(callTimer)}</span>
+                </>
+              ) : (
+                <span className="text-[#9aa2c2]">{formatTime(callTimer)}</span>
+              )}
             </div>
 
             {/* Side Panel Toggle Buttons - Mobile Only */}
