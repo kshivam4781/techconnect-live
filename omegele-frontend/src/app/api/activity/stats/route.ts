@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
+    // Get total registered users count
+    const totalRegisteredUsers = await prisma.user.count();
+
     // Get all recent activities (within last 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
@@ -15,9 +18,13 @@ export async function GET() {
     });
 
     // Count by status
-    const totalOnline = activities.filter((a) => a.status === "ONLINE").length;
+    const online = activities.filter((a) => a.status === "ONLINE").length;
     const searching = activities.filter((a) => a.status === "SEARCHING").length;
     const inCall = activities.filter((a) => a.status === "IN_CALL").length;
+    
+    // Calculate totals
+    const totalOnline = online + searching + inCall; // All users who are online (any status)
+    const totalActive = searching + inCall; // Users who are actively searching or in a call
 
     // Count by mode
     const videoCount = activities.filter(
@@ -28,9 +35,12 @@ export async function GET() {
     ).length;
 
     return NextResponse.json({
-      totalOnline,
-      searching,
-      inCall,
+      totalRegisteredUsers,
+      totalOnline, // All users online (ONLINE + SEARCHING + IN_CALL)
+      totalActive, // Users actively searching or in call (SEARCHING + IN_CALL)
+      online, // Users just browsing (ONLINE status)
+      searching, // Users searching for a match
+      inCall, // Users in an active call
       breakdown: {
         video: videoCount,
         text: textCount,

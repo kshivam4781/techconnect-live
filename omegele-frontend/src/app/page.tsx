@@ -8,6 +8,35 @@ export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [stats, setStats] = useState<{
+    totalRegisteredUsers: number;
+    totalActive: number;
+    totalOnline: number;
+  } | null>(null);
+
+  // Fetch user statistics
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/activity/stats");
+        const data = await res.json();
+        if (data.totalRegisteredUsers !== undefined) {
+          setStats({
+            totalRegisteredUsers: data.totalRegisteredUsers,
+            totalActive: data.totalActive || 0,
+            totalOnline: data.totalOnline || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    fetchStats();
+    // Update stats every 10 seconds
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Check if user needs onboarding
   useEffect(() => {
@@ -144,24 +173,47 @@ export default function Home() {
             <div className="mt-6 grid max-w-xl grid-cols-3 gap-3 text-left text-[11px] text-[#d3dcec]">
               <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
                 <p className="text-xs font-semibold text-[#f8f3e8]">
-                  2,300+ minutes
+                  {stats ? (
+                    <>
+                      {stats.totalRegisteredUsers.toLocaleString()}
+                      {stats.totalRegisteredUsers >= 1000 && "+"}
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </p>
                 <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
-                  of conversations in early tests
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
-                <p className="text-xs font-semibold text-[#f8f3e8]">92%</p>
-                <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
-                  say they&apos;d come back for another chat
+                  registered users
                 </p>
               </div>
               <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
                 <p className="text-xs font-semibold text-[#f8f3e8]">
-                  Under 30s
+                  {stats ? (
+                    <>
+                      {stats.totalActive}
+                      <span className="ml-1 inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </p>
                 <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
-                  typical time to find a match
+                  users active now
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-3 py-2">
+                <p className="text-xs font-semibold text-[#f8f3e8]">
+                  {stats ? (
+                    <>
+                      {stats.totalOnline}
+                      <span className="ml-1 inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </p>
+                <p className="mt-0.5 text-[10px] text-[#9aa2c2]">
+                  users online
                 </p>
               </div>
             </div>

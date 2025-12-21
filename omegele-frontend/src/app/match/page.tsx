@@ -54,6 +54,7 @@ export default function MatchPage() {
     isBlocked: boolean;
     reason?: string;
   } | null>(null);
+  const [onlineUsersCount, setOnlineUsersCount] = useState<number | null>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -563,6 +564,26 @@ export default function MatchPage() {
       }, 25000);
     });
   };
+
+  // Fetch online users count
+  useEffect(() => {
+    const fetchOnlineUsers = async () => {
+      try {
+        const res = await fetch("/api/activity/stats");
+        const data = await res.json();
+        if (data.totalOnline !== undefined) {
+          setOnlineUsersCount(data.totalOnline);
+        }
+      } catch (error) {
+        console.error("Error fetching online users:", error);
+      }
+    };
+
+    fetchOnlineUsers();
+    // Update every 10 seconds
+    const interval = setInterval(fetchOnlineUsers, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Debug: Log socket connection status
   useEffect(() => {
@@ -1438,7 +1459,7 @@ export default function MatchPage() {
             <span className="hidden sm:inline">Go Back</span>
           </button>
 
-          {/* Center: User Info */}
+          {/* Center: User Info and Online Count */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#1f2937] text-sm sm:text-lg font-semibold">
               {session?.user?.name?.charAt(0) || "?"}
@@ -1447,6 +1468,15 @@ export default function MatchPage() {
               <p className="text-sm font-semibold">{session?.user?.name || "User"}</p>
               <p className="text-xs text-[#9aa2c2] truncate max-w-[120px] md:max-w-[200px]">{session?.user?.email || ""}</p>
             </div>
+            {/* Online Users Count */}
+            {onlineUsersCount !== null && (
+              <div className="ml-2 sm:ml-4 flex items-center gap-1.5 rounded-lg border border-[#3b435a] bg-[#0f1729] px-2 sm:px-3 py-1 text-xs font-medium text-[#f8f3e8]">
+                <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
+                <span className="hidden sm:inline">{onlineUsersCount}</span>
+                <span className="sm:hidden">{onlineUsersCount}</span>
+                <span className="hidden md:inline text-[#9aa2c2]">online</span>
+              </div>
+            )}
           </div>
 
           {/* Right: Options */}
