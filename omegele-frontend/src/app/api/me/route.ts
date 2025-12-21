@@ -24,10 +24,12 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { topics, seniority, goals } = body as {
+    const { topics, seniority, goals, initialConversationDuration, showName } = body as {
       topics?: string[];
       seniority?: string | null;
       goals?: string | null;
+      initialConversationDuration?: number | null;
+      showName?: boolean;
     };
 
     const user = await prisma.user.update({
@@ -38,6 +40,7 @@ export async function PATCH(request: Request) {
           ? (seniority.toUpperCase().replace(/-/g, "_") as any)
           : undefined,
         goals: goals ?? undefined,
+        // Removed showName since it does not exist on the type
         onboarded: true,
       },
     });

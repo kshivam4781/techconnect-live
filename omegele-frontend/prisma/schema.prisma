@@ -18,19 +18,66 @@ enum Seniority {
   OTHER
 }
 
+enum ActivityStatus {
+  ONLINE      // User is on the site
+  SEARCHING   // User is actively searching for a match
+  IN_CALL     // User is in an active call
+  OFFLINE     // User left or disconnected
+}
+
+enum CallMode {
+  VIDEO
+  TEXT
+}
+
+enum MatchStatus {
+  PENDING   // Match found, waiting for both users to join
+  ACTIVE    // Both users joined, call in progress
+  ENDED     // Call ended normally
+  SKIPPED   // One user skipped
+  TIMEOUT   // Match timeout (user didn't join)
+}
+
+enum FlagCategory {
+  HARASSMENT      // Harassment or bullying
+  INAPPROPRIATE   // Inappropriate content/behavior
+  SPAM            // Spam or solicitation
+  SCAM            // Scam or fraud
+  HATE_SPEECH     // Hate speech
+  VIOLENCE        // Threats or violence
+  OTHER           // Other reason
+}
+
+enum FlagStatus {
+  PENDING     // Flag submitted, awaiting review
+  REVIEWED    // Under review by admin
+  RESOLVED    // Action taken (e.g., user banned)
+  DISMISSED   // Flag dismissed (false report)
+}
+
 model User {
-  id        String     @id @default(cuid())
-  email     String?    @unique
-  name      String?
-  image     String?
-  accounts  Account[]
-  topics    String[]   @default([])
-  seniority Seniority?
-  timezone  String?
-  goals     String?
-  onboarded Boolean    @default(false)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                          String     @id @default(cuid())
+  email                       String?    @unique
+  name                        String?
+  image                       String?
+  accounts                    Account[]
+  topics                      String[]   @default([])
+  seniority                   Seniority?
+  timezone                    String?
+  goals                       String?
+  onboarded                    Boolean    @default(false)
+  initialConversationDuration Int?       @default(60) // Duration in seconds, max 60 (1 minute)
+  showName                     Boolean    @default(true) // Whether to show name to matched users
+  createdAt                   DateTime   @default(now())
+  updatedAt                   DateTime   @updatedAt
+  
+  // Relations
+  activities      UserActivity[]
+  sessions        UserSession[]
+  matchesAsUser1  Match[] @relation("MatchesAsUser1")
+  matchesAsUser2  Match[] @relation("MatchesAsUser2")
+  flagsCreated    Flag[]  @relation("FlagsCreated")    // Flags this user created
+  flagsReceived   Flag[]  @relation("FlagsReceived")    // Flags against this user
 }
 
 model Account {
@@ -44,5 +91,124 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model UserActivity {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Activity tracking
+  status    ActivityStatus @default(ONLINE) // ONLINE, SEARCHING, IN_CALL, OFFLINE
+  mode      CallMode?      // VIDEO, TEXT (null when not searching)
+  joinedAt  DateTime       @default(now())
+  lastSeen  DateTime       @default(now())
+  
+  // Indexes for fast queries
+  @@index([status, joinedAt])
+  @@index([userId, lastSeen])
+  @@map("user_activities")
+}
+
+model UserSession {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Session tracking
+  sessionId       String   @unique // Unique session identifier
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  isActive        Boolean  @default(true)
+  
+  // Track previously matched users in this session (to prevent re-matching)
+  matchedUserIds  String[] @default([]) // Array of user IDs this user has already matched with
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, isActive])
+  @@index([sessionId])
+  @@map("user_sessions")
+}
+
+model Match {
+  id              String   @id @default(cuid())
+  user1Id         String
+  user2Id         String
+  user1           User     @relation("MatchesAsUser1", fields: [user1Id], references: [id])
+  user2           User     @relation("MatchesAsUser2", fields: [user2Id], references: [id])
+  
+  // Session tracking - CRITICAL for preventing duplicate matches
+  user1SessionId  String?  // Session ID for user1 when this match occurred
+  user2SessionId  String?  // Session ID for user2 when this match occurred
+  
+  // Match details
+  mode            CallMode // VIDEO or TEXT
+  status          MatchStatus @default(PENDING) // PENDING, ACTIVE, ENDED, SKIPPED
+  
+  // Timeline tracking - CRITICAL for tracking who matched with whom and when
+  matchedAt       DateTime @default(now())  // When match was found/created
+  startedAt       DateTime?                 // When both users joined and call actually started
+  endedAt         DateTime?                 // When call ended
+  duration        Int?                      // Duration in seconds (calculated: endedAt - startedAt)
+  
+  // WebRTC room/session info
+  roomId          String?  @unique // For WebRTC signaling
+  user1JoinedAt   DateTime?        // When user1 joined the call
+  user2JoinedAt   DateTime?        // When user2 joined the call
+  
+  // Matching criteria (for analytics)
+  matchedTopics   String[] // Topics that matched
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  flags           Flag[]  // Flags related to this match
+  
+  @@index([user1Id, matchedAt])
+  @@index([user2Id, matchedAt])
+  @@index([user1Id, status])
+  @@index([user2Id, status])
+  @@index([status, startedAt])
+  @@index([matchedAt])  // For querying matches by time range
+  @@index([roomId])
+  @@index([user1SessionId])  // For session-based queries
+  @@index([user2SessionId])  // For session-based queries
+}
+
+model Flag {
+  id              String   @id @default(cuid())
+  
+  // Who flagged whom
+  flaggedById     String   // User who reported/flagged
+  flaggedBy       User     @relation("FlagsCreated", fields: [flaggedById], references: [id])
+  flaggedUserId   String   // User who was flagged
+  flaggedUser     User     @relation("FlagsReceived", fields: [flaggedUserId], references: [id])
+  
+  // Match context - which call/match this flag is related to
+  matchId         String?
+  match           Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  
+  // Flag details
+  reason          String   // Reason for flagging (user-provided)
+  category        FlagCategory? // Optional categorization
+  flaggedAt       DateTime @default(now()) // When flag was created
+  
+  // Status tracking
+  status          FlagStatus @default(PENDING) // PENDING, REVIEWED, RESOLVED, DISMISSED
+  reviewedAt      DateTime?
+  reviewedBy      String?  // Admin user ID who reviewed
+  adminNotes      String?  // Admin notes/actions taken
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([flaggedById, flaggedAt])
+  @@index([flaggedUserId, flaggedAt])
+  @@index([matchId])
+  @@index([status, flaggedAt])
+  @@index([flaggedAt])
 }
 

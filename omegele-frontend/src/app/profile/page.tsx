@@ -90,6 +90,8 @@ type UserResponse = {
     name: string | null;
     email: string | null;
     image: string | null;
+    initialConversationDuration: number | null;
+    showName: boolean | null;
   } | null;
 };
 
@@ -103,6 +105,8 @@ export default function ProfilePage() {
   const [topics, setTopics] = useState<string[]>([]);
   const [seniority, setSeniority] = useState<string | null>(null);
   const [goals, setGoals] = useState<string>("");
+  const [initialConversationDuration, setInitialConversationDuration] = useState<number>(60);
+  const [showName, setShowName] = useState<boolean>(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -121,6 +125,8 @@ export default function ProfilePage() {
           setTopics(data.user.topics ?? []);
           setSeniority(data.user.seniority);
           setGoals(data.user.goals || "");
+          setInitialConversationDuration(data.user.initialConversationDuration ?? 60);
+          setShowName(data.user.showName ?? true);
         }
       } catch (err) {
         console.error("Error fetching user:", err);
@@ -155,6 +161,8 @@ export default function ProfilePage() {
           topics,
           seniority,
           goals: goals.trim() || null,
+          initialConversationDuration,
+          showName,
         }),
       });
 
@@ -215,6 +223,63 @@ export default function ProfilePage() {
           <p className="mt-2 text-sm text-[#9aa2c2]">
             Manage your profile information, preferences, and account settings.
           </p>
+        </div>
+
+        {/* Overview Section */}
+        <div className="rounded-2xl border border-[#272f45] bg-gradient-to-br from-[#0b1018] to-[#050816] p-6">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2]">
+              Your Profile Overview
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+                Conversation Duration
+              </p>
+              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+                {initialConversationDuration}s
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#64748b]">
+                Max: 60 seconds
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+                Name Visibility
+              </p>
+              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+                {showName ? "Visible" : "Hidden"}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#64748b]">
+                {showName ? "Others can see your name" : "Name is hidden"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+                Selected Topics
+              </p>
+              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+                {topics.length}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#64748b]">
+                {topics.length > 0 ? "Topics selected" : "No topics selected"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+                Seniority Level
+              </p>
+              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+                {seniority
+                  ? SENIORITY_OPTIONS.find((s) => s.value === seniority)?.label.split(" / ")[0] || "Not set"
+                  : "Not set"}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#64748b]">
+                {seniority ? "Level configured" : "Configure below"}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(0,1.2fr)]">
@@ -355,6 +420,77 @@ export default function ProfilePage() {
                 className="w-full resize-none rounded-md border border-[#3b435a] bg-[#050816] px-3 py-2 text-xs text-[#e5e7eb] outline-none focus:border-[#ffd447]"
                 placeholder='e.g. "Mock interviews for backend roles", "Honest feedback on startup ideas", "Chat with other self-taught devs"'
               />
+            </section>
+
+            {/* Conversation Configuration */}
+            <section className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
+              <div>
+                <p className="text-sm font-medium">Conversation Settings</p>
+                <p className="text-xs text-[#9aa2c2]">
+                  Configure how your initial conversations work.
+                </p>
+              </div>
+
+              {/* Initial Conversation Duration */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-[#f8f3e8]">
+                    Initial conversation duration
+                  </label>
+                  <span className="text-xs text-[#9aa2c2]">
+                    {initialConversationDuration} seconds
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#9aa2c2]">
+                  How long should your initial conversation be? (Maximum: 1 minute)
+                </p>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="10"
+                    max="60"
+                    step="5"
+                    value={initialConversationDuration}
+                    onChange={(e) => setInitialConversationDuration(Number(e.target.value))}
+                    className="w-full h-2 bg-[#050816] rounded-lg appearance-none cursor-pointer accent-[#ffd447]"
+                  />
+                  <div className="flex justify-between text-[10px] text-[#64748b]">
+                    <span>10s</span>
+                    <span>20s</span>
+                    <span>30s</span>
+                    <span>40s</span>
+                    <span>50s</span>
+                    <span>60s</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Show Name Toggle */}
+              <div className="space-y-2 pt-2 border-t border-[#343d55]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-medium text-[#f8f3e8]">
+                      Show your name to matched users
+                    </label>
+                    <p className="text-[11px] text-[#9aa2c2] mt-1">
+                      When enabled, your name will be visible to people you&apos;re matched with.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowName(!showName)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      showName ? "bg-[#bef264]" : "bg-[#3b435a]"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showName ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </section>
 
             {/* Save Button */}
