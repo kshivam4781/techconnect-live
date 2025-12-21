@@ -10,14 +10,14 @@ import FlagModal from "@/components/FlagModal";
 type MatchStatus = "idle" | "permission" | "ready" | "searching" | "matched" | "in-call" | "ended";
 
 const matchingMessages = [
-  "Looking for your co-founder...",
-  "Looking for your hiring manager...",
-  "Looking for your mentor...",
+  "Looking for your next co-founder...",
+  "Looking for your next hiring manager...",
+  "Looking for your next mentor...",
   "Looking for your next teammate...",
-  "Looking for your tech partner...",
-  "Looking for your advisor...",
-  "Looking for your collaborator...",
-  "Looking for your peer...",
+  "Looking for your next tech partner...",
+  "Looking for your next advisor...",
+  "Looking for your next collaborator...",
+  "Looking for your next peer...",
 ];
 
 export default function MatchPage() {
@@ -191,14 +191,40 @@ export default function MatchPage() {
       setOtherUserId(matchData.otherUserId);
       setMatchStatus("matched");
       
+      // Ensure local video stream is preserved
+      if (localVideoRef.current?.srcObject) {
+        const stream = localVideoRef.current.srcObject as MediaStream;
+        // Make sure all tracks are enabled
+        stream.getTracks().forEach((track) => {
+          track.enabled = true;
+        });
+      }
+      
       // Auto-transition to in-call after 2 seconds
       setTimeout(() => {
         console.log("Starting call with matchId:", matchId);
         startCall(matchId);
         setMatchStatus("in-call");
+        
+        // Ensure streams are still attached after transition
+        setTimeout(() => {
+          if (localVideoRef.current && !localVideoRef.current.srcObject) {
+            // Re-request stream if lost
+            navigator.mediaDevices.getUserMedia({
+              video: callMode === "VIDEO",
+              audio: true,
+            }).then((stream) => {
+              if (localVideoRef.current) {
+                localVideoRef.current.srcObject = stream;
+              }
+            }).catch((error) => {
+              console.error("Error re-acquiring media:", error);
+            });
+          }
+        }, 500);
       }, 2000);
     }
-  }, [matchData, matchStatus, startCall]);
+  }, [matchData, matchStatus, startCall, callMode]);
 
   const handleSelectMode = async (mode: "VIDEO" | "AUDIO") => {
     setCallMode(mode);

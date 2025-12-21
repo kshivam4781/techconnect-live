@@ -24,6 +24,7 @@ export function useWebRTC({
 }: UseWebRTCOptions) {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const handlersAttachedRef = useRef(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
@@ -47,6 +48,12 @@ export function useWebRTC({
         if (!stream && localVideoRef.current?.srcObject) {
           stream = localVideoRef.current.srcObject as MediaStream;
           localStreamRef.current = stream;
+          // Ensure all tracks are enabled
+          stream.getTracks().forEach((track) => {
+            if (!track.enabled) {
+              track.enabled = true;
+            }
+          });
         }
 
         // If still no stream, request new one
@@ -59,71 +66,114 @@ export function useWebRTC({
 
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
+            // Ensure video plays
+            localVideoRef.current.play().catch((err) => {
+              console.error("Error playing local video:", err);
+            });
+          }
+        } else {
+          // Ensure stream is still attached to video element
+          if (localVideoRef.current && localVideoRef.current.srcObject !== stream) {
+            localVideoRef.current.srcObject = stream;
+            localVideoRef.current.play().catch((err) => {
+              console.error("Error playing local video:", err);
+            });
           }
         }
 
         // Only create peer connection when we have a matchId
-        if (matchId && socket && !peerConnectionRef.current) {
-          // Create peer connection
-          const pc = new RTCPeerConnection({
-            iceServers: [
-              { urls: "stun:stun.l.google.com:19302" },
-              { urls: "stun:stun1.l.google.com:19302" },
-            ],
-          });
+        if (matchId && socket) {
+          let pc = peerConnectionRef.current;
+          
+          // Create new peer connection if it doesn't exist
+          if (!pc) {
+            pc = new RTCPeerConnection({
+              iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+              ],
+            });
+            peerConnectionRef.current = pc;
+            handlersAttachedRef.current = false; // Reset flag for new connection
+          }
 
-          peerConnectionRef.current = pc;
-
-          // Add local stream tracks to peer connection
-          if (stream) {
+          // Add local stream tracks to peer connection if not already added
+          if (stream && pc) {
+            const existingTracks = pc.getSenders().map(sender => sender.track);
             stream.getTracks().forEach((track) => {
-              pc.addTrack(track, stream);
+              // Only add track if it's not already in the connection
+              if (!existingTracks.includes(track)) {
+                pc.addTrack(track, stream);
+                console.log("Added track to peer connection:", track.kind, track.label);
+              }
             });
           }
 
-          // Handle remote stream
-          pc.ontrack = (event) => {
-            console.log("Received remote track:", event);
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = event.streams[0];
-              // Ensure audio is enabled and not muted
-              remoteVideoRef.current.muted = false;
-              if (remoteVideoRef.current.volume !== undefined) {
-                remoteVideoRef.current.volume = 1.0;
+          // Handle remote stream (set handlers only once when creating new connection)
+          if (!handlersAttachedRef.current) {
+            pc.ontrack = (event) => {
+              console.log("Received remote track:", event);
+              if (remoteVideoRef.current) {
+                const remoteStream = event.streams[0];
+                remoteVideoRef.current.srcObject = remoteStream;
+                // Ensure audio is enabled and not muted
+                remoteVideoRef.current.muted = false;
+                if (remoteVideoRef.current.volume !== undefined) {
+                  remoteVideoRef.current.volume = 1.0;
+                }
+                // Log audio tracks
+                remoteStream.getAudioTracks().forEach((track) => {
+                  console.log("Remote audio track:", track.label, "enabled:", track.enabled);
+                  track.enabled = true;
+                });
+                // Log video tracks
+                remoteStream.getVideoTracks().forEach((track) => {
+                  console.log("Remote video track:", track.label, "enabled:", track.enabled);
+                  track.enabled = true;
+                });
+                // Force play to ensure video and audio work
+                remoteVideoRef.current.play().catch((err) => {
+                  console.error("Error playing remote video:", err);
+                });
               }
-              // Log audio tracks
-              event.streams[0].getAudioTracks().forEach((track) => {
-                console.log("Remote audio track:", track.label, "enabled:", track.enabled);
-              });
-              // Force play to ensure audio works
-              remoteVideoRef.current.play().catch((err) => {
-                console.error("Error playing remote video:", err);
-              });
-            }
-          };
+            };
 
-          // Handle ICE candidates
-          pc.onicecandidate = (event) => {
-            if (event.candidate && socket && matchId) {
-              console.log("Sending ICE candidate:", event.candidate);
-              socket.emit("webrtc-ice-candidate", {
-                matchId,
-                candidate: event.candidate,
-              });
-            }
-          };
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+              if (event.candidate && socket && matchId) {
+                console.log("Sending ICE candidate:", event.candidate);
+                socket.emit("webrtc-ice-candidate", {
+                  matchId,
+                  candidate: event.candidate,
+                });
+              }
+            };
+            
+            handlersAttachedRef.current = true;
+          }
 
           // Handle connection state changes
           pc.onconnectionstatechange = () => {
             console.log("Peer connection state:", pc.connectionState);
+            if (pc.connectionState === "connected") {
+              // Ensure remote video is playing when connected
+              if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+                remoteVideoRef.current.play().catch((err) => {
+                  console.error("Error playing remote video after connection:", err);
+                });
+              }
+            }
           };
 
-          // Create and send offer
-          console.log("Creating offer for matchId:", matchId);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-
-          socket.emit("webrtc-offer", { matchId, offer });
+          // Create and send offer only if we don't have a local description
+          if (pc.signalingState === "stable" && !pc.localDescription) {
+            console.log("Creating offer for matchId:", matchId);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit("webrtc-offer", { matchId, offer });
+          } else {
+            console.log("Peer connection already has offer or in progress, state:", pc.signalingState);
+          }
         }
       } catch (error) {
         console.error("Error initializing media:", error);
@@ -134,9 +184,10 @@ export function useWebRTC({
 
     return () => {
       // Only cleanup peer connection, keep stream
-      if (peerConnectionRef.current) {
+      if (peerConnectionRef.current && !enabled) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
+        handlersAttachedRef.current = false;
       }
     };
   }, [enabled, matchId, socket, localVideoRef, remoteVideoRef, audioOnly]);
