@@ -12,8 +12,10 @@ enum Seniority {
   JUNIOR
   MID
   SENIOR
-  STAFF_LEAD
-  EXEC
+  STAFF
+  MANAGER
+  FOUNDER
+  OTHER
 }
 
 model User {

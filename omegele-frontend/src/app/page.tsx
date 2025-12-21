@@ -1,9 +1,51 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { signIn, useSession, signOut } from "next-auth/react";
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (status === "loading") return;
+    
+    if (!session) {
+      setCheckingOnboarding(false);
+      return;
+    }
+
+    // Check onboarded status from session first (faster)
+    const sessionOnboarded = (session as any)?.onboarded;
+    if (sessionOnboarded === false) {
+      router.push("/onboarding");
+      return;
+    }
+
+    // If not in session, fetch from API
+    if (sessionOnboarded === undefined) {
+      const checkOnboarding = async () => {
+        try {
+          const res = await fetch("/api/me");
+          const data = await res.json();
+          if (data.user && !data.user.onboarded) {
+            router.push("/onboarding");
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking onboarding:", error);
+        } finally {
+          setCheckingOnboarding(false);
+        }
+      };
+      checkOnboarding();
+    } else {
+      setCheckingOnboarding(false);
+    }
+  }, [session, status, router]);
 
   return (
     <div className="min-h-screen bg-[#0b1018] text-[#f8f3e8]">
@@ -39,11 +81,19 @@ export default function Home() {
               real stories, ideas, and unfiltered advice.
             </p>
 
-            {session ? (
+            {checkingOnboarding && session ? (
               <div className="space-y-3">
                 <div className="rounded-2xl border border-[#343d55] bg-[#050816] px-4 py-3 text-left text-xs text-[#d3dcec]">
                   <p className="text-[11px] font-semibold text-[#bef264]">
-                    You&apos;re in.
+                    Checking your profile…
+                  </p>
+                </div>
+              </div>
+            ) : session ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-[#343d55] bg-[#050816] px-4 py-3 text-left text-xs text-[#d3dcec]">
+                  <p className="text-[11px] font-semibold text-[#bef264]">
+                    You&apos;re all set.
                   </p>
                   <p className="mt-1 text-sm font-medium text-[#f8f3e8]">
                     Signed in as{" "}
@@ -52,17 +102,16 @@ export default function Home() {
                     </span>
                   </p>
                   <p className="mt-1 text-[11px] text-[#9aa2c2]">
-                    Next step: we&apos;ll use this identity to match you with
-                    other verified tech folks.
+                    Ready to start conversations. Click &quot;Start conversation&quot; when you&apos;re ready.
                   </p>
                 </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <button
                     onClick={() => signOut()}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-5 text-sm font-medium text-[#f8f3e8] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6471a3] hover:bg-[#151f35]"
                   >
                     Sign out
-              </button>
+                  </button>
                 </div>
                 <p className="text-xs text-[#9aa2c2]">
                   OAuth only · No anonymous accounts · You choose what you
