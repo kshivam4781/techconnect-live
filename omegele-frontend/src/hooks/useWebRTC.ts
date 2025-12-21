@@ -135,6 +135,15 @@ export function useWebRTC({
               // If not available, it will be set when the element is rendered (handled by useEffect below)
               if (remoteVideoRef.current) {
                 console.log("Setting remote stream to video element, tracks:", remoteStream.getTracks().length);
+                
+                // Ensure all tracks are enabled before setting
+                remoteStream.getTracks().forEach((track) => {
+                  if (!track.enabled) {
+                    track.enabled = true;
+                    console.log("Enabled remote track before setting to element:", track.kind, track.label);
+                  }
+                });
+                
                 remoteVideoRef.current.srcObject = remoteStream;
                 
                 // Ensure audio is enabled and not muted
@@ -146,19 +155,22 @@ export function useWebRTC({
                 // Log all tracks
                 remoteStream.getAudioTracks().forEach((track) => {
                   console.log("Remote audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
-                  track.enabled = true;
                 });
                 remoteStream.getVideoTracks().forEach((track) => {
                   console.log("Remote video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
-                  track.enabled = true;
                 });
                 
                 // Force play to ensure video and audio work
-                remoteVideoRef.current.play().then(() => {
-                  console.log("Remote video playing successfully");
-                }).catch((err) => {
-                  console.error("Error playing remote video:", err);
-                });
+                // Use a small delay to ensure the stream is fully attached
+                setTimeout(() => {
+                  if (remoteVideoRef.current && remoteVideoRef.current.srcObject === remoteStream) {
+                    remoteVideoRef.current.play().then(() => {
+                      console.log("Remote video playing successfully");
+                    }).catch((err) => {
+                      console.error("Error playing remote video:", err);
+                    });
+                  }
+                }, 100);
               } else {
                 console.log("remoteVideoRef.current is null, stream stored in ref. Will be set when element is available.");
               }
@@ -309,10 +321,19 @@ export function useWebRTC({
     if (!enabled || !matchId) return;
     
     const checkRemoteVideo = () => {
-      if (remoteVideoRef.current && remoteStreamRef.current) {
+      if (remoteVideoRef.current) {
         // Use remoteStreamRef if video element doesn't have a stream
-        if (!remoteVideoRef.current.srcObject) {
+        if (!remoteVideoRef.current.srcObject && remoteStreamRef.current) {
           console.log("Restoring remote stream to video element, tracks:", remoteStreamRef.current.getTracks().length);
+          
+          // Ensure all tracks are enabled before setting
+          remoteStreamRef.current.getTracks().forEach((track) => {
+            if (!track.enabled) {
+              track.enabled = true;
+              console.log("Enabled remote track before restoration:", track.kind, track.label);
+            }
+          });
+          
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
         }
         
@@ -332,8 +353,8 @@ export function useWebRTC({
             remoteVideoRef.current.volume = 1.0;
           }
           
-          // Try to play if paused
-          if (remoteVideoRef.current.paused) {
+          // Try to play if paused or not playing
+          if (remoteVideoRef.current.paused || remoteVideoRef.current.readyState < 3) {
             remoteVideoRef.current.play().then(() => {
               console.log("Remote video playing after restoration");
             }).catch((err) => {
@@ -341,6 +362,9 @@ export function useWebRTC({
             });
           }
         }
+      } else if (remoteStreamRef.current) {
+        // Stream exists but video element is not available yet
+        console.log("Remote stream available but video element not ready, tracks:", remoteStreamRef.current.getTracks().length);
       }
     };
 

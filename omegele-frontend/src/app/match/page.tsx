@@ -421,6 +421,53 @@ export default function MatchPage() {
     }
   }, [matchData, matchStatus, startCall, callMode]);
 
+  // Ensure remote video is properly displayed when in-call
+  useEffect(() => {
+    if (matchStatus === "in-call" && remoteVideoRef.current) {
+      const checkAndSetupRemoteVideo = () => {
+        if (remoteVideoRef.current) {
+          const stream = remoteVideoRef.current.srcObject as MediaStream;
+          if (stream) {
+            // Ensure all tracks are enabled
+            stream.getTracks().forEach((track) => {
+              if (!track.enabled) {
+                track.enabled = true;
+                console.log("Enabled remote track in in-call effect:", track.kind);
+              }
+            });
+            
+            // Ensure video element settings
+            remoteVideoRef.current.muted = false;
+            if (remoteVideoRef.current.volume !== undefined) {
+              remoteVideoRef.current.volume = 1.0;
+            }
+            
+            // Try to play if not already playing
+            if (remoteVideoRef.current.paused) {
+              remoteVideoRef.current.play().then(() => {
+                console.log("Remote video playing in in-call effect");
+              }).catch((err) => {
+                console.error("Error playing remote video in in-call effect:", err);
+              });
+            }
+          }
+        }
+      };
+      
+      // Check immediately
+      checkAndSetupRemoteVideo();
+      
+      // Check periodically for a short time to catch delayed stream attachment
+      const interval = setInterval(checkAndSetupRemoteVideo, 500);
+      const timeout = setTimeout(() => clearInterval(interval), 5000);
+      
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [matchStatus]);
+
   const handleSelectMode = async (mode: "VIDEO" | "AUDIO") => {
     setCallMode(mode);
     setPermissionError(null);
@@ -780,9 +827,9 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] overflow-hidden">
+    <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] overflow-hidden flex flex-col">
       {/* Top Header - User Info and Options */}
-      <div className="absolute top-0 left-0 right-0 z-50 border-b border-[#272f45] bg-[#0b1018]/95 backdrop-blur-sm">
+      <div className="flex-shrink-0 z-50 border-b border-[#272f45] bg-[#0b1018]/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-2 sm:px-4 md:px-6 py-2 sm:py-3">
           {/* Left: Go Back Button */}
           <button
@@ -840,7 +887,7 @@ export default function MatchPage() {
 
       {/* Configuration Page (Idle State) */}
       {matchStatus === "idle" && (
-        <div className="flex h-full items-center justify-center px-4 sm:px-6 py-8 sm:py-10 pt-16 sm:pt-20 overflow-y-auto">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 overflow-y-auto min-h-0">
           <div className="mx-auto max-w-2xl w-full space-y-4 sm:space-y-6 text-center">
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
@@ -924,7 +971,7 @@ export default function MatchPage() {
 
       {/* Permission Request Page */}
       {matchStatus === "permission" && (
-        <div className="flex h-full items-center justify-center px-4 sm:px-6 py-8 sm:py-10 pt-16 sm:pt-20 overflow-y-auto">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 overflow-y-auto min-h-0">
           <div className="mx-auto max-w-md w-full space-y-4 sm:space-y-6 text-center">
             <div className="space-y-3 sm:space-y-4">
               <div className="mx-auto h-16 w-16 sm:h-24 sm:w-24 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent" />
@@ -952,7 +999,7 @@ export default function MatchPage() {
 
       {/* Ready State - Video Preview with Start Button */}
       {matchStatus === "ready" && (
-        <div className="flex flex-col md:flex-row h-full w-full pt-14 sm:pt-16 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden min-h-0">
           {/* Left Side - Video Preview */}
           <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-2 sm:p-4 min-h-0">
             {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
@@ -1039,7 +1086,7 @@ export default function MatchPage() {
 
       {/* Matching/Searching Page - Omegle Style */}
       {(matchStatus === "searching" || matchStatus === "matched") && (
-        <div className="flex flex-col md:flex-row h-full w-full pt-14 sm:pt-16 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden min-h-0">
           {/* Left Side - Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0 flex items-center justify-center p-2 sm:p-4">
             {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
@@ -1094,43 +1141,59 @@ export default function MatchPage() {
 
               {/* Remote Video or Placeholder */}
               <div className="relative w-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
-                {matchStatus === "matched" && remoteVideoRef.current?.srcObject ? (
+                {callMode === "VIDEO" ? (
                   <>
-                    {callMode === "VIDEO" ? (
-                      <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        muted={false}
-                        className="h-full w-full object-cover bg-[#111827]"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                        <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
-                          {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted={false}
+                      className="h-full w-full object-cover bg-[#111827]"
+                      onLoadedMetadata={() => {
+                        console.log("Remote video metadata loaded (matched state)");
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.muted = false;
+                          remoteVideoRef.current.volume = 1.0;
+                          remoteVideoRef.current.play().catch((err) => {
+                            console.error("Error playing remote video on metadata (matched):", err);
+                          });
+                        }
+                      }}
+                      onCanPlay={() => {
+                        console.log("Remote video can play (matched state)");
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.muted = false;
+                          remoteVideoRef.current.volume = 1.0;
+                          remoteVideoRef.current.play().catch((err) => {
+                            console.error("Error playing remote video on canplay (matched):", err);
+                          });
+                        }
+                      }}
+                    />
+                    {!remoteVideoRef.current?.srcObject && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10">
+                        <div className="text-center">
+                          <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold mx-auto mb-2">
+                            {matchStatus === "matched" ? (otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?") : "?"}
+                          </div>
+                          <p className="text-xs text-[#9aa2c2]">
+                            {matchStatus === "matched" ? "Connecting..." : "Waiting for match..."}
+                          </p>
                         </div>
                       </div>
                     )}
-                    <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur">
-                      {otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
+                    <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20">
+                      {matchStatus === "matched" && remoteVideoRef.current?.srcObject
+                        ? (otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User")
+                        : (matchStatus === "matched" ? "Connecting..." : "Waiting...")}
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                      <div className="text-center">
-                        <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold mx-auto mb-2">
-                          ?
-                        </div>
-                        <p className="text-xs text-[#9aa2c2]">
-                          {matchStatus === "matched" ? "Connecting..." : "Waiting for match..."}
-                        </p>
-                      </div>
+                  <div className="flex h-full w-full items-center justify-center bg-[#111827]">
+                    <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
+                      {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                     </div>
-                    <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur">
-                      {matchStatus === "matched" ? "Connecting..." : "Waiting..."}
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -1169,7 +1232,7 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden m-0 p-0">
+        <div className="flex-1 flex flex-col lg:flex-row w-full overflow-hidden m-0 p-0 min-h-0">
           {/* Column 1: Video Area - Desktop: 1/3, Mobile: Full */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0 flex flex-col p-2 sm:p-4 border-b lg:border-b-0 lg:border-r border-[#272f45]">
             {/* Videos Container - Top half: Remote, Bottom half: Local */}
@@ -1187,6 +1250,8 @@ export default function MatchPage() {
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded");
                         if (remoteVideoRef.current) {
+                          remoteVideoRef.current.muted = false;
+                          remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
                             console.error("Error playing remote video on metadata:", err);
                           });
@@ -1195,14 +1260,19 @@ export default function MatchPage() {
                       onCanPlay={() => {
                         console.log("Remote video can play");
                         if (remoteVideoRef.current) {
+                          remoteVideoRef.current.muted = false;
+                          remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
                             console.error("Error playing remote video on canplay:", err);
                           });
                         }
                       }}
+                      onPlay={() => {
+                        console.log("Remote video started playing");
+                      }}
                     />
-                    {(!remoteVideoRef.current?.srcObject || !isVideoEnabled) && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
+                    {!remoteVideoRef.current?.srcObject && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10">
                         <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
                           {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                         </div>
@@ -1216,7 +1286,7 @@ export default function MatchPage() {
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur">
+                <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20">
                   {otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
                 </div>
               </div>
@@ -1672,7 +1742,7 @@ export default function MatchPage() {
 
       {/* Ended State */}
       {matchStatus === "ended" && (
-        <div className="flex h-full items-center justify-center px-4 sm:px-6 py-8 sm:py-10 pt-16 sm:pt-20 overflow-y-auto">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 overflow-y-auto min-h-0">
           <div className="mx-auto max-w-md w-full space-y-4 sm:space-y-6 text-center">
             <div className="space-y-3 sm:space-y-4">
               <div className="mx-auto h-16 w-16 sm:h-24 sm:w-24 rounded-full border-4 border-[#3b435a] bg-[#050816] flex items-center justify-center">
