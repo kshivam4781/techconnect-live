@@ -63,7 +63,7 @@ export default function MatchPage() {
     sendChatMessage,
   } = useSocket();
 
-  const { isVideoEnabled, isAudioEnabled, toggleVideo, toggleAudio } = useWebRTC({
+  const { isVideoEnabled, isAudioEnabled, toggleVideo, toggleAudio, peerConnectionState } = useWebRTC({
     socket,
     matchId: currentMatchId,
     roomId: currentRoomId,
@@ -72,6 +72,74 @@ export default function MatchPage() {
     enabled: (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && (callMode === "VIDEO" || callMode === "AUDIO"),
     audioOnly: callMode === "AUDIO",
   });
+
+  // Monitor peer connection state for disconnections
+  useEffect(() => {
+    if (matchStatus === "in-call" && (peerConnectionState === "disconnected" || peerConnectionState === "failed") && !isEndingCallRef.current) {
+      console.log("Peer connection disconnected/failed, will trigger auto-rematch if still disconnected after 3 seconds");
+      // Wait a bit to see if it reconnects
+      const timeout = setTimeout(() => {
+        // Check current state again (using functional updates to get latest values)
+        setMatchStatus((prevStatus) => {
+          if ((prevStatus === "in-call" || prevStatus === "matched") && !isEndingCallRef.current) {
+            console.log("Peer disconnected, automatically starting new search...");
+            
+            // Store current values before cleanup
+            const sessionId = currentSessionId;
+            const mode = callMode;
+            
+            // Clean up current match state
+            setCurrentMatchId(null);
+            setCurrentRoomId(null);
+            setOtherUserId(null);
+            setOtherUserInfo(null);
+            setCallTimer(0);
+            setShowInfoPanel(false);
+            setShowChatPanel(false);
+            setChatMessages([]);
+
+            setTimeout(() => {
+              if (sessionId && mode) {
+                setMatchStatus("searching");
+                hasJoinedQueueRef.current = false;
+                const backendMode: "VIDEO" | "TEXT" = mode === "AUDIO" ? "VIDEO" : "VIDEO";
+                
+                fetch("/api/activity/update", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ status: "SEARCHING", mode: backendMode }),
+                }).catch(console.error);
+
+                if (isConnected) {
+                  hasJoinedQueueRef.current = true;
+                  joinQueue(sessionId, backendMode);
+                } else {
+                  // Wait for connection
+                  const checkConnection = setInterval(() => {
+                    if (isConnected && sessionId) {
+                      clearInterval(checkConnection);
+                      hasJoinedQueueRef.current = true;
+                      joinQueue(sessionId, backendMode);
+                    }
+                  }, 500);
+                  
+                  // Cleanup after 30 seconds
+                  setTimeout(() => clearInterval(checkConnection), 30000);
+                }
+              } else {
+                setMatchStatus("ready");
+              }
+            }, 500);
+            
+            return "searching";
+          }
+          return prevStatus;
+        });
+      }, 3000); // Wait 3 seconds before triggering rematch
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [peerConnectionState, matchStatus, currentSessionId, callMode, isConnected, joinQueue]);
 
   // Handle video stream for ready state (preview before searching)
   useEffect(() => {
@@ -279,7 +347,7 @@ export default function MatchPage() {
     }
   }, [matchStatus]);
 
-  // Auto-rematch when other user disconnects
+  // Auto-rematch when other user disconnects or call ends
   useEffect(() => {
     if (!socket || !currentMatchId) return;
 
@@ -711,6 +779,76 @@ export default function MatchPage() {
       }, 1000);
     } catch (error) {
       console.error("Error skipping:", error);
+      isEndingCallRef.current = false;
+    }
+  };
+
+  const handleNextMatch = async () => {
+    try {
+      isEndingCallRef.current = true; // Mark that we're ending the call
+      
+      // End current call
+      if (currentMatchId) {
+        endCall(currentMatchId, "skipped");
+      }
+
+      // Clean up current match state
+      const previousSessionId = currentSessionId;
+      const previousCallMode = callMode;
+      
+      setCurrentMatchId(null);
+      setCurrentRoomId(null);
+      setOtherUserId(null);
+      setOtherUserInfo(null);
+      setCallTimer(0);
+      setShowInfoPanel(false);
+      setShowChatPanel(false);
+      setChatMessages([]);
+
+      // Small delay before starting new search to ensure cleanup
+      setTimeout(async () => {
+        // Automatically start searching again
+        if (previousSessionId && previousCallMode) {
+          setMatchStatus("searching");
+          hasJoinedQueueRef.current = false;
+          const backendMode: "VIDEO" | "TEXT" = previousCallMode === "AUDIO" ? "VIDEO" : "VIDEO";
+          
+          // Update activity
+          await fetch("/api/activity/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "SEARCHING", mode: backendMode }),
+          }).catch(console.error);
+
+          // Join queue again
+          if (isConnected) {
+            hasJoinedQueueRef.current = true;
+            joinQueue(previousSessionId, backendMode);
+          } else {
+            // Wait for connection
+            const checkConnection = setInterval(() => {
+              if (isConnected && previousSessionId) {
+                clearInterval(checkConnection);
+                hasJoinedQueueRef.current = true;
+                joinQueue(previousSessionId, backendMode);
+              }
+            }, 500);
+            
+            // Cleanup after 30 seconds
+            setTimeout(() => clearInterval(checkConnection), 30000);
+          }
+        } else {
+          // If no session, go back to ready state
+          setMatchStatus("ready");
+        }
+        
+        // Reset flag after transition
+        setTimeout(() => {
+          isEndingCallRef.current = false;
+        }, 1000);
+      }, 500);
+    } catch (error) {
+      console.error("Error going to next match:", error);
       isEndingCallRef.current = false;
     }
   };
@@ -1452,8 +1590,24 @@ export default function MatchPage() {
               </button>
 
               <button
+                onClick={handleNextMatch}
+                className="flex h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-[#ffd447] bg-[#ffd447]/10 text-[#ffd447] transition active:border-[#facc15] active:bg-[#ffd447]/20"
+                title="Next Match"
+              >
+                <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+
+              <button
                 onClick={handleSkip}
                 className="flex h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35]"
+                title="Skip"
               >
                 <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -1468,6 +1622,7 @@ export default function MatchPage() {
               <button
                 onClick={handleEndCall}
                 className="flex h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-red-500 text-white transition active:bg-red-600"
+                title="End Call"
               >
                 <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

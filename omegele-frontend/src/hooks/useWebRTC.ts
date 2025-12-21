@@ -28,6 +28,7 @@ export function useWebRTC({
   const handlersAttachedRef = useRef(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [peerConnectionState, setPeerConnectionState] = useState<RTCPeerConnectionState>("new");
 
   // Initialize local media stream (start camera when enabled, even without matchId)
   useEffect(() => {
@@ -192,8 +193,11 @@ export function useWebRTC({
 
           // Handle connection state changes
           pc.onconnectionstatechange = () => {
-            console.log("Peer connection state:", pc.connectionState);
-            if (pc.connectionState === "connected") {
+            const state = pc.connectionState;
+            console.log("Peer connection state:", state);
+            setPeerConnectionState(state);
+            
+            if (state === "connected") {
               // Ensure remote video is playing when connected
               if (remoteVideoRef.current) {
                 if (remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
@@ -211,6 +215,9 @@ export function useWebRTC({
               }
             }
           };
+          
+          // Set initial state
+          setPeerConnectionState(pc.connectionState);
 
           // Create and send offer only if we don't have a local description
           // Add a small delay to ensure both users are in the socket room
@@ -402,6 +409,7 @@ export function useWebRTC({
     isAudioEnabled,
     toggleVideo,
     toggleAudio,
+    peerConnectionState,
   };
 }
 
