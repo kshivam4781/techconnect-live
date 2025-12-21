@@ -146,9 +146,17 @@ export default function MatchPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Debug: Log socket connection status
+  useEffect(() => {
+    console.log("Socket connected:", isConnected);
+    console.log("Current match status:", matchStatus);
+    console.log("Match data:", matchData);
+  }, [isConnected, matchStatus, matchData]);
+
   // Handle match found from socket
   useEffect(() => {
     if (matchData && matchStatus === "searching") {
+      console.log("Match found! Setting up connection...", matchData);
       const matchId = matchData.matchId;
       setCurrentMatchId(matchId);
       setCurrentRoomId(matchData.roomId);
@@ -157,6 +165,7 @@ export default function MatchPage() {
       
       // Auto-transition to in-call after 2 seconds
       setTimeout(() => {
+        console.log("Starting call with matchId:", matchId);
         startCall(matchId);
         setMatchStatus("in-call");
       }, 2000);
@@ -238,13 +247,45 @@ export default function MatchPage() {
         body: JSON.stringify({ status: "SEARCHING", mode: backendMode }),
       });
 
-      // Join queue via socket
-      if (isConnected && sessionData.sessionId) {
-        joinQueue(sessionData.sessionId, backendMode);
+      // Wait for socket connection if not connected, then join queue
+      const waitForConnection = (retries = 10): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          if (isConnected) {
+            resolve();
+            return;
+          }
+          
+          let attempts = 0;
+          const checkConnection = setInterval(() => {
+            attempts++;
+            if (isConnected) {
+              clearInterval(checkConnection);
+              resolve();
+            } else if (attempts >= retries) {
+              clearInterval(checkConnection);
+              reject(new Error("Socket connection timeout"));
+            }
+          }, 500);
+        });
+      };
+
+      try {
+        await waitForConnection();
+        if (sessionData.sessionId) {
+          console.log("Joining queue with sessionId:", sessionData.sessionId, "mode:", backendMode);
+          joinQueue(sessionData.sessionId, backendMode);
+        }
+      } catch (error) {
+        console.error("Error waiting for socket connection:", error);
+        // Try to join anyway
+        if (sessionData.sessionId) {
+          joinQueue(sessionData.sessionId, backendMode);
+        }
       }
     } catch (error) {
       console.error("Error starting match:", error);
       setMatchStatus("ready");
+      alert("Failed to start searching. Please try again.");
     }
   };
 

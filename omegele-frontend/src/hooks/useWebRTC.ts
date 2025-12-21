@@ -30,33 +30,40 @@ export function useWebRTC({
   // Initialize local media stream (start camera when enabled, even without matchId)
   useEffect(() => {
     if (!enabled) {
-      // Cleanup when disabled
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-      }
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
+      // Don't cleanup stream if we're just transitioning states
+      // Only cleanup peer connection
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
       }
       return;
     }
 
     const initMedia = async () => {
       try {
-        // Get user media (camera/mic or audio only)
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: !audioOnly,
-          audio: true,
-        });
+        // Check if we already have a stream from the video element
+        let stream = localStreamRef.current;
+        
+        if (!stream && localVideoRef.current?.srcObject) {
+          stream = localVideoRef.current.srcObject as MediaStream;
+          localStreamRef.current = stream;
+        }
 
-        localStreamRef.current = stream;
+        // If still no stream, request new one
+        if (!stream) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: !audioOnly,
+            audio: true,
+          });
+          localStreamRef.current = stream;
 
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+          }
         }
 
         // Only create peer connection when we have a matchId
-        if (matchId && socket) {
+        if (matchId && socket && !peerConnectionRef.current) {
           // Create peer connection
           const pc = new RTCPeerConnection({
             iceServers: [
@@ -68,12 +75,15 @@ export function useWebRTC({
           peerConnectionRef.current = pc;
 
           // Add local stream tracks to peer connection
-          stream.getTracks().forEach((track) => {
-            pc.addTrack(track, stream);
-          });
+          if (stream) {
+            stream.getTracks().forEach((track) => {
+              pc.addTrack(track, stream);
+            });
+          }
 
           // Handle remote stream
           pc.ontrack = (event) => {
+            console.log("Received remote track:", event);
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = event.streams[0];
             }
@@ -82,6 +92,7 @@ export function useWebRTC({
           // Handle ICE candidates
           pc.onicecandidate = (event) => {
             if (event.candidate && socket && matchId) {
+              console.log("Sending ICE candidate:", event.candidate);
               socket.emit("webrtc-ice-candidate", {
                 matchId,
                 candidate: event.candidate,
@@ -89,7 +100,13 @@ export function useWebRTC({
             }
           };
 
+          // Handle connection state changes
+          pc.onconnectionstatechange = () => {
+            console.log("Peer connection state:", pc.connectionState);
+          };
+
           // Create and send offer
+          console.log("Creating offer for matchId:", matchId);
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
 
@@ -103,82 +120,14 @@ export function useWebRTC({
     initMedia();
 
     return () => {
-      // Cleanup
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-      }
-
+      // Only cleanup peer connection, keep stream
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
       }
     };
-  }, [enabled, matchId, socket, localVideoRef, remoteVideoRef]);
+  }, [enabled, matchId, socket, localVideoRef, remoteVideoRef, audioOnly]);
 
-  // Create peer connection when matchId becomes available (if media already initialized)
-  useEffect(() => {
-    if (!enabled || !matchId || !socket || !localStreamRef.current) {
-      return;
-    }
-
-    // Don't create if peer connection already exists
-    if (peerConnectionRef.current) {
-      return;
-    }
-
-    const initPeerConnection = async () => {
-      try {
-        const pc = new RTCPeerConnection({
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-          ],
-        });
-
-        peerConnectionRef.current = pc;
-
-        // Add local stream tracks to peer connection
-        if (localStreamRef.current) {
-          localStreamRef.current.getTracks().forEach((track) => {
-            pc.addTrack(track, localStreamRef.current!);
-          });
-        }
-
-        // Handle remote stream
-        pc.ontrack = (event) => {
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = event.streams[0];
-          }
-        };
-
-        // Handle ICE candidates
-        pc.onicecandidate = (event) => {
-          if (event.candidate && socket && matchId) {
-            socket.emit("webrtc-ice-candidate", {
-              matchId,
-              candidate: event.candidate,
-            });
-          }
-        };
-
-        // Handle connection state changes
-        pc.onconnectionstatechange = () => {
-          console.log("Peer connection state:", pc.connectionState);
-        };
-
-        // Create and send offer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        socket.emit("webrtc-offer", { matchId, offer });
-      } catch (error) {
-        console.error("Error initializing peer connection:", error);
-      }
-    };
-
-    initPeerConnection();
-  }, [enabled, matchId, socket]);
 
   // Handle WebRTC signaling
   useEffect(() => {
