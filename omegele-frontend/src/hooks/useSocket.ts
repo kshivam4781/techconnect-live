@@ -95,6 +95,11 @@ export function useSocket() {
       console.log("Queue position:", data.position);
     });
 
+    socket.on("chat-message", (data: { userId: string; message: string; timestamp: string }) => {
+      console.log("Chat message received:", data);
+      // This will be handled by the component using a callback
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
@@ -157,6 +162,12 @@ export function useSocket() {
     }
   };
 
+  const sendChatMessage = (matchId: string, message: string) => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit("chat-message", { matchId, message });
+    }
+  };
+
   return {
     socket: socketRef.current,
     isConnected,
@@ -168,6 +179,7 @@ export function useSocket() {
     sendWebRTCOffer,
     sendWebRTCAnswer,
     sendWebRTCIceCandidate,
+    sendChatMessage,
   };
 }
 

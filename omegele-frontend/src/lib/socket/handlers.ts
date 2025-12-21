@@ -288,6 +288,53 @@ export function setupSocketHandlers(io: SocketIOServer) {
       socket.broadcast.to(`match-${matchId}`).emit("webrtc-ice-candidate", { candidate });
     });
 
+    // Handle chat messages
+    socket.on("chat-message", async (data: { matchId: string; message: string }) => {
+      try {
+        const { matchId, message } = data;
+
+        // Validate message
+        if (!message || message.trim().length === 0) {
+          socket.emit("error", { message: "Message cannot be empty" });
+          return;
+        }
+
+        if (message.length > 1000) {
+          socket.emit("error", { message: "Message too long (max 1000 characters)" });
+          return;
+        }
+
+        // Verify match exists and user is part of it
+        const match = await (prisma as any).match.findUnique({
+          where: { id: matchId },
+        });
+
+        if (!match) {
+          socket.emit("error", { message: "Match not found" });
+          return;
+        }
+
+        // Verify user is part of this match
+        if (match.user1Id !== userId && match.user2Id !== userId) {
+          socket.emit("error", { message: "Not authorized" });
+          return;
+        }
+
+        // Broadcast message to all users in the match room (including sender)
+        // This ensures the sender also receives their own message for UI consistency
+        const messageData = {
+          userId,
+          message: message.trim(),
+          timestamp: new Date().toISOString(),
+        };
+
+        io.to(`match-${matchId}`).emit("chat-message", messageData);
+      } catch (error: any) {
+        console.error("Error handling chat message:", error);
+        socket.emit("error", { message: error.message || "Failed to send message" });
+      }
+    });
+
     // Handle disconnect
     socket.on("disconnect", async () => {
       console.log(`Socket disconnected: ${socket.id}`);

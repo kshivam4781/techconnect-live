@@ -37,8 +37,12 @@ export default function MatchPage() {
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [otherUserInfo, setOtherUserInfo] = useState<{ name: string; email: string; showName: boolean } | null>(null);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [flagId, setFlagId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; userId: string; message: string; timestamp: Date; isOwn: boolean }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const matchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,6 +58,7 @@ export default function MatchPage() {
     leaveQueue,
     startCall,
     endCall,
+    sendChatMessage,
   } = useSocket();
 
   const { isVideoEnabled, isAudioEnabled, toggleVideo, toggleAudio } = useWebRTC({
@@ -190,6 +195,84 @@ export default function MatchPage() {
       joinQueue(currentSessionId, backendMode);
     }
   }, [isConnected, matchStatus, currentSessionId, callMode, joinQueue]);
+
+  // Fetch other user's information when match is found
+  useEffect(() => {
+    const fetchOtherUserInfo = async () => {
+      if (!currentMatchId) return;
+      
+      try {
+        const res = await fetch(`/api/matches/${currentMatchId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const match = data.match;
+          const currentUserId = (session as any)?.userId;
+          
+          // Determine which user is the other user
+          const otherUser = match.user1Id === currentUserId ? match.user2 : match.user1;
+          
+          if (otherUser) {
+            setOtherUserInfo({
+              name: otherUser.name || "User",
+              email: otherUser.email || "",
+              showName: otherUser.showName ?? true,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching other user info:", error);
+      }
+    };
+
+    if (currentMatchId && (matchStatus === "matched" || matchStatus === "in-call")) {
+      fetchOtherUserInfo();
+    }
+  }, [currentMatchId, matchStatus, session]);
+
+  // Handle chat messages from socket
+  useEffect(() => {
+    if (!socket || !currentMatchId) return;
+
+    const handleChatMessage = (data: { userId: string; message: string; timestamp: string }) => {
+      const currentUserId = (session as any)?.userId;
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          userId: data.userId,
+          message: data.message,
+          timestamp: new Date(data.timestamp),
+          isOwn: data.userId === currentUserId,
+        },
+      ]);
+    };
+
+    socket.on("chat-message", handleChatMessage);
+
+    return () => {
+      socket.off("chat-message", handleChatMessage);
+    };
+  }, [socket, currentMatchId, session]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // Clear chat messages when match ends
+  useEffect(() => {
+    if (matchStatus !== "in-call") {
+      setChatMessages([]);
+    }
+  }, [matchStatus]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !currentMatchId) return;
+
+    sendChatMessage(currentMatchId, chatInput.trim());
+    setChatInput("");
+  };
 
   // Handle match found from socket
   useEffect(() => {
@@ -427,6 +510,7 @@ export default function MatchPage() {
       setCurrentMatchId(null);
       setCurrentRoomId(null);
       setOtherUserId(null);
+      setOtherUserInfo(null);
       setCallTimer(0);
 
       setTimeout(() => {
@@ -453,6 +537,7 @@ export default function MatchPage() {
       setCurrentMatchId(null);
       setCurrentRoomId(null);
       setOtherUserId(null);
+      setOtherUserInfo(null);
       setCallTimer(0);
     } catch (error) {
       console.error("Error skipping:", error);
@@ -921,12 +1006,12 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex flex-col md:flex-row h-full w-full pt-16 overflow-hidden">
-          {/* Left Side - Video Area */}
-          <div className="flex-1 relative bg-[#0b1018] min-h-0">
+        <div className="flex h-full w-full overflow-hidden m-0 p-0">
+          {/* Column 1: Video Area */}
+          <div className="flex-1 relative bg-[#0b1018] min-h-0 flex flex-col border-r border-[#272f45]">
             {/* Top: Remote Video */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-2 sm:p-4">
-              <div className="relative w-full max-w-4xl rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+            <div className="flex-1 flex items-center justify-center p-2">
+              <div className="relative w-full h-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden">
                 {callMode === "VIDEO" ? (
                   <>
                     <video
@@ -954,31 +1039,31 @@ export default function MatchPage() {
                     />
                     {(!remoteVideoRef.current?.srcObject || !isVideoEnabled) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
-                        <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
-                          {otherUserId ? (session.user?.name?.charAt(0) || "?") : "?"}
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1f2937] text-2xl font-semibold">
+                          {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                         </div>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                    <div className="flex h-24 w-24 sm:h-32 sm:w-32 items-center justify-center rounded-full bg-[#1f2937] text-4xl sm:text-6xl font-semibold">
-                      {session.user?.name?.charAt(0) || "?"}
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                      {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
-                  {session.user?.name || "User"}
+                <div className="absolute bottom-2 left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 py-1 text-xs font-medium backdrop-blur">
+                  {otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
                 </div>
-                <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 sm:px-4 py-1 sm:py-2 text-xs font-medium backdrop-blur">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
                   {formatTime(callTimer)}
                 </div>
               </div>
             </div>
 
             {/* Bottom: Local Video */}
-            <div className="absolute bottom-16 sm:bottom-20 md:bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-2 sm:p-4">
-              <div className="relative w-full max-w-md rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+            <div className="h-48 flex items-center justify-center p-2 border-t border-[#272f45]">
+              <div className="relative w-full max-w-xs h-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden">
                 {callMode === "VIDEO" ? (
                   <video
                     ref={localVideoRef}
@@ -989,19 +1074,19 @@ export default function MatchPage() {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                    <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1f2937] text-2xl font-semibold">
                       {session.user?.name?.charAt(0) || "?"}
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
+                <div className="absolute bottom-2 left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 py-1 text-xs font-medium backdrop-blur">
                   You
                 </div>
               </div>
             </div>
 
             {/* Controls */}
-            <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 z-10 flex-wrap justify-center max-w-full px-2">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 flex-wrap justify-center max-w-full px-2">
               <button
                 onClick={toggleAudio}
                 className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border transition ${
@@ -1113,9 +1198,70 @@ export default function MatchPage() {
             </div>
           </div>
 
-          {/* Right Side - User Info */}
-          <div className="hidden md:flex w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex-col">
-            <div className="space-y-4">
+          {/* Column 2: Chat Area */}
+          <div className="flex-1 flex flex-col border-r border-[#272f45] bg-[#0b1018] min-w-0">
+            <div className="flex-1 flex flex-col h-full">
+              {/* Chat Header */}
+              <div className="border-b border-[#272f45] p-4">
+                <h3 className="text-sm font-medium text-[#f8f3e8]">Chat</h3>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-[#9aa2c2]">No messages yet. Start the conversation!</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                          msg.isOwn
+                            ? "bg-[#ffd447] text-[#18120b]"
+                            : "bg-[#1f2937] text-[#f8f3e8]"
+                        }`}
+                      >
+                        <p className="text-sm break-words">{msg.message}</p>
+                        <p className={`text-xs mt-1 ${msg.isOwn ? "text-[#18120b]/70" : "text-[#9aa2c2]"}`}>
+                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={chatMessagesEndRef} />
+              </div>
+
+              {/* Chat Input */}
+              <div className="border-t border-[#272f45] p-4">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm text-[#f8f3e8] placeholder:text-[#9aa2c2] focus:outline-none focus:border-[#6471a3]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="rounded-lg bg-[#ffd447] px-4 py-2 text-sm font-semibold text-[#18120b] transition hover:bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 3: User Info */}
+          <div className="w-80 flex flex-col border-l border-[#272f45] bg-[#0b1018] min-w-0">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Your Information */}
               <div>
                 <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
                 <div className="space-y-2">
@@ -1130,6 +1276,34 @@ export default function MatchPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Divider */}
+              <div className="border-t border-[#272f45]"></div>
+
+              {/* Other User Information */}
+              {otherUserInfo && (
+                <div>
+                  <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Matched User</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                        {otherUserInfo.showName && otherUserInfo.name ? otherUserInfo.name.charAt(0) : "?"}
+                      </div>
+                      <div>
+                        <p className="font-semibold">
+                          {otherUserInfo.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
+                        </p>
+                        {otherUserInfo.showName && otherUserInfo.email && (
+                          <p className="text-xs text-[#9aa2c2]">{otherUserInfo.email}</p>
+                        )}
+                        {!otherUserInfo.showName && (
+                          <p className="text-xs text-[#9aa2c2] italic">Name hidden by user</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

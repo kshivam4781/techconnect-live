@@ -26,6 +26,7 @@ export async function GET(
             name: true,
             image: true,
             email: true,
+            showName: true,
           },
         },
         user2: {
@@ -34,6 +35,7 @@ export async function GET(
             name: true,
             image: true,
             email: true,
+            showName: true,
           },
         },
       },
