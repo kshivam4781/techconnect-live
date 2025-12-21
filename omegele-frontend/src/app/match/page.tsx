@@ -181,6 +181,16 @@ export default function MatchPage() {
     console.log("Match data:", matchData);
   }, [isConnected, matchStatus, matchData]);
 
+  // Auto-retry joining queue when socket connects if we're searching
+  useEffect(() => {
+    if (isConnected && matchStatus === "searching" && currentSessionId) {
+      // Socket just connected and we're searching, retry joining queue
+      console.log("Socket connected while searching, retrying queue join");
+      const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
+      joinQueue(currentSessionId, backendMode);
+    }
+  }, [isConnected, matchStatus, currentSessionId, callMode, joinQueue]);
+
   // Handle match found from socket
   useEffect(() => {
     if (matchData && matchStatus === "searching") {
@@ -302,9 +312,16 @@ export default function MatchPage() {
       });
 
       // Wait for socket connection if not connected, then join queue
-      const waitForConnection = (retries = 10): Promise<void> => {
-        return new Promise((resolve, reject) => {
+      // Increased timeout to 30 seconds (60 retries * 500ms) for Railway connections
+      const waitForConnection = (retries = 60): Promise<void> => {
+        return new Promise((resolve) => {
           if (isConnected) {
+            resolve();
+            return;
+          }
+          
+          // Also check if socket exists and is connected
+          if (socket && (socket as any).connected) {
             resolve();
             return;
           }
@@ -312,12 +329,14 @@ export default function MatchPage() {
           let attempts = 0;
           const checkConnection = setInterval(() => {
             attempts++;
-            if (isConnected) {
+            if (isConnected || (socket && (socket as any).connected)) {
               clearInterval(checkConnection);
               resolve();
             } else if (attempts >= retries) {
               clearInterval(checkConnection);
-              reject(new Error("Socket connection timeout"));
+              // Don't reject, just log - joinQueue will handle queuing
+              console.warn("Socket connection timeout after 30s, but will attempt to join queue anyway");
+              resolve(); // Resolve instead of reject so we still try to join
             }
           }, 500);
         });
@@ -331,8 +350,9 @@ export default function MatchPage() {
         }
       } catch (error) {
         console.error("Error waiting for socket connection:", error);
-        // Try to join anyway
+        // Try to join anyway - joinQueue will queue the request if not connected
         if (sessionData.sessionId) {
+          console.log("Attempting to join queue despite connection error");
           joinQueue(sessionData.sessionId, backendMode);
         }
       }

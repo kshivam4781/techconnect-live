@@ -17,6 +17,7 @@ export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [matchData, setMatchData] = useState<MatchFoundData | null>(null);
+  const pendingQueueJoinRef = useRef<{ sessionId: string; mode: "VIDEO" | "TEXT" } | null>(null);
 
   useEffect(() => {
     if (!session || !(session as any).userId) {
@@ -24,11 +25,19 @@ export function useSocket() {
     }
 
     // Initialize socket connection
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin, {
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    console.log("Initializing socket connection to:", socketUrl);
+    
+    const socket = io(socketUrl, {
       auth: {
         userId: (session as any).userId,
       },
       transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      timeout: 20000, // 20 second connection timeout
     });
 
     socketRef.current = socket;
@@ -36,11 +45,23 @@ export function useSocket() {
     socket.on("connect", () => {
       console.log("Socket connected");
       setIsConnected(true);
+      
+      // If there's a pending queue join, execute it now
+      if (pendingQueueJoinRef.current) {
+        const { sessionId, mode } = pendingQueueJoinRef.current;
+        console.log("Socket connected, joining queue with pending request:", sessionId, mode);
+        socket.emit("join-queue", { sessionId, mode });
+        pendingQueueJoinRef.current = null;
+      }
     });
 
     socket.on("disconnect", () => {
       console.log("Socket disconnected");
       setIsConnected(false);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
     });
 
     socket.on("match-found", (data: MatchFoundData) => {
@@ -63,6 +84,7 @@ export function useSocket() {
 
     socket.on("queue-joined", (data: { queuePosition: number }) => {
       console.log("Queue joined, position:", data.queuePosition);
+      pendingQueueJoinRef.current = null; // Clear pending request
     });
 
     socket.on("queue-left", () => {
@@ -76,12 +98,26 @@ export function useSocket() {
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      pendingQueueJoinRef.current = null;
     };
   }, [session]);
 
   const joinQueue = (sessionId: string, mode: "VIDEO" | "TEXT") => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit("join-queue", { sessionId, mode });
+    if (socketRef.current) {
+      if (isConnected) {
+        // Socket is connected, emit immediately
+        console.log("Joining queue immediately (connected):", sessionId, mode);
+        socketRef.current.emit("join-queue", { sessionId, mode });
+      } else {
+        // Socket not connected yet, queue the request
+        console.log("Socket not connected, queuing join request:", sessionId, mode);
+        pendingQueueJoinRef.current = { sessionId, mode };
+        
+        // Also try to emit anyway (socket.io might queue it)
+        socketRef.current.emit("join-queue", { sessionId, mode });
+      }
+    } else {
+      console.warn("Socket not initialized, cannot join queue");
     }
   };
 
