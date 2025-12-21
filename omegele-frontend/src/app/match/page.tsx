@@ -7,13 +7,15 @@ import { useSocket } from "@/hooks/useSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import FlagModal from "@/components/FlagModal";
 
-type MatchStatus = "idle" | "searching" | "matched" | "in-call" | "ended";
+type MatchStatus = "idle" | "permission" | "ready" | "searching" | "matched" | "in-call" | "ended";
 
 export default function MatchPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [matchStatus, setMatchStatus] = useState<MatchStatus>("idle");
-  const [callMode, setCallMode] = useState<"VIDEO" | "TEXT">("VIDEO");
+  const [callMode, setCallMode] = useState<"VIDEO" | "AUDIO">("VIDEO");
+  const [hasPermission, setHasPermission] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [matchTimer, setMatchTimer] = useState(0);
   const [callTimer, setCallTimer] = useState(0);
   const [conversationDuration, setConversationDuration] = useState<number>(60);
@@ -47,8 +49,26 @@ export default function MatchPage() {
     roomId: currentRoomId,
     localVideoRef,
     remoteVideoRef,
-    enabled: matchStatus === "in-call" && callMode === "VIDEO",
+    enabled: (matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && (callMode === "VIDEO" || callMode === "AUDIO"),
+    audioOnly: callMode === "AUDIO",
   });
+
+  // Handle video stream for ready state (preview before searching)
+  useEffect(() => {
+    if (matchStatus === "ready" && callMode === "VIDEO" && !localVideoRef.current?.srcObject) {
+      // Request stream again if not already set
+      navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      }).then((stream) => {
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      }).catch((error) => {
+        console.error("Error getting media in ready state:", error);
+      });
+    }
+  }, [matchStatus, callMode]);
 
   // Check if user is onboarded and fetch conversation config
   useEffect(() => {
@@ -129,31 +149,79 @@ export default function MatchPage() {
   // Handle match found from socket
   useEffect(() => {
     if (matchData && matchStatus === "searching") {
-      setCurrentMatchId(matchData.matchId);
+      const matchId = matchData.matchId;
+      setCurrentMatchId(matchId);
       setCurrentRoomId(matchData.roomId);
       setOtherUserId(matchData.otherUserId);
       setMatchStatus("matched");
       
       // Auto-transition to in-call after 2 seconds
       setTimeout(() => {
-        if (currentMatchId) {
-          startCall(currentMatchId);
-          setMatchStatus("in-call");
-        }
+        startCall(matchId);
+        setMatchStatus("in-call");
       }, 2000);
     }
-  }, [matchData, matchStatus, currentMatchId, startCall]);
+  }, [matchData, matchStatus, startCall]);
 
-  const handleStartMatch = async (mode: "VIDEO" | "TEXT") => {
+  const handleSelectMode = async (mode: "VIDEO" | "AUDIO") => {
+    setCallMode(mode);
+    setPermissionError(null);
+    
+    // For video calls, request permission first
+    if (mode === "VIDEO") {
+      setMatchStatus("permission");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        
+        // Set the stream to video element
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        
+        setHasPermission(true);
+        setMatchStatus("ready");
+      } catch (error: any) {
+        console.error("Error requesting permission:", error);
+        setPermissionError(error.message || "Failed to access camera/microphone");
+        setHasPermission(false);
+      }
+    } else {
+      // For audio calls, request audio permission
+      setMatchStatus("permission");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
+        
+        setHasPermission(true);
+        setMatchStatus("ready");
+        
+        // Cleanup audio stream (we don't need to show it)
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (error: any) {
+        console.error("Error requesting permission:", error);
+        setPermissionError(error.message || "Failed to access microphone");
+        setHasPermission(false);
+      }
+    }
+  };
+
+  const handleStartSearch = async () => {
     try {
-      setCallMode(mode);
       setMatchStatus("searching");
+
+      // Map AUDIO to VIDEO for backend compatibility (we'll handle video off in UI)
+      const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
 
       // Start session
       const sessionRes = await fetch("/api/session/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: mode.toLowerCase() }),
+        body: JSON.stringify({ mode: backendMode.toLowerCase() }),
       });
 
       if (!sessionRes.ok) {
@@ -167,16 +235,16 @@ export default function MatchPage() {
       await fetch("/api/activity/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "SEARCHING", mode }),
+        body: JSON.stringify({ status: "SEARCHING", mode: backendMode }),
       });
 
       // Join queue via socket
       if (isConnected && sessionData.sessionId) {
-        joinQueue(sessionData.sessionId, mode);
+        joinQueue(sessionData.sessionId, backendMode);
       }
     } catch (error) {
       console.error("Error starting match:", error);
-      setMatchStatus("idle");
+      setMatchStatus("ready");
     }
   };
 
@@ -198,12 +266,34 @@ export default function MatchPage() {
         body: JSON.stringify({ status: "ONLINE" }),
       });
 
+      // Stop any media streams
+      if (localVideoRef.current?.srcObject) {
+        const stream = localVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        localVideoRef.current.srcObject = null;
+      }
+
       setMatchStatus("idle");
       setCurrentSessionId(null);
       setMatchTimer(0);
+      setHasPermission(false);
+      setPermissionError(null);
     } catch (error) {
       console.error("Error stopping search:", error);
     }
+  };
+
+  const handleBackToHome = () => {
+    // Stop any media streams
+    if (localVideoRef.current?.srcObject) {
+      const stream = localVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    
+    setMatchStatus("idle");
+    setHasPermission(false);
+    setPermissionError(null);
   };
 
   const handleEndCall = async () => {
@@ -336,6 +426,7 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-[#050710] text-[#f8f3e8]">
+      {/* Configuration Page (Idle State) */}
       {matchStatus === "idle" && (
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
           <div className="mx-auto max-w-2xl space-y-6 text-center">
@@ -372,7 +463,7 @@ export default function MatchPage() {
                 <p className="text-sm font-medium text-[#f8f3e8]">Choose your mode</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <button
-                    onClick={() => handleStartMatch("VIDEO")}
+                    onClick={() => handleSelectMode("VIDEO")}
                     className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 transition hover:border-[#ffd447] hover:bg-[#18120b]"
                   >
                     <svg
@@ -393,7 +484,7 @@ export default function MatchPage() {
                   </button>
 
                   <button
-                    onClick={() => handleStartMatch("TEXT")}
+                    onClick={() => handleSelectMode("AUDIO")}
                     className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 transition hover:border-[#ffd447] hover:bg-[#18120b]"
                   >
                     <svg
@@ -406,11 +497,11 @@ export default function MatchPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                       />
                     </svg>
-                    <span className="text-sm font-medium">Text Chat</span>
-                    <span className="text-xs text-[#9aa2c2]">Text-only conversation</span>
+                    <span className="text-sm font-medium">Audio Call</span>
+                    <span className="text-xs text-[#9aa2c2]">Voice-only conversation</span>
                   </button>
                 </div>
               </div>
@@ -419,131 +510,245 @@ export default function MatchPage() {
         </div>
       )}
 
-      {matchStatus === "searching" && (
+      {/* Permission Request Page */}
+      {matchStatus === "permission" && (
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
           <div className="mx-auto max-w-md space-y-6 text-center">
             <div className="space-y-4">
               <div className="mx-auto h-24 w-24 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent" />
               <div>
-                <h2 className="text-2xl font-semibold">Finding your match…</h2>
+                <h2 className="text-2xl font-semibold">Requesting Camera Access</h2>
                 <p className="mt-2 text-sm text-[#9aa2c2]">
-                  Looking for someone with similar interests
+                  Please allow camera and microphone access to continue
                 </p>
-                <p className="mt-4 text-xs text-[#64748b]">
-                  {formatTime(matchTimer)}
-                </p>
+                {permissionError && (
+                  <p className="mt-4 text-sm text-red-400">
+                    {permissionError}
+                  </p>
+                )}
               </div>
               <button
-                onClick={handleStopSearch}
+                onClick={handleBackToHome}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-5 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
               >
-                Cancel
+                Go Back
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {matchStatus === "matched" && (
-        <div className="flex min-h-screen items-center justify-center px-4 py-10">
-          <div className="mx-auto max-w-md space-y-6 text-center">
-            <div className="space-y-4">
-              <div className="mx-auto h-24 w-24 rounded-full border-4 border-[#bef264] bg-[#1a2b16] flex items-center justify-center">
-                <svg
-                  className="h-12 w-12 text-[#bef264]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+      {/* Ready State - Video Preview with Start Button */}
+      {matchStatus === "ready" && (
+        <div className="flex h-screen overflow-hidden">
+          {/* Left Side - Video Preview */}
+          <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-4">
+            <div className="relative w-full max-w-2xl rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+              {callMode === "VIDEO" ? (
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#111827]">
+                  <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#1f2937] text-6xl font-semibold">
+                    {session.user?.name?.charAt(0) || "?"}
+                  </div>
+                </div>
+              )}
+              <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                You
               </div>
+            </div>
+
+            {/* Back Button */}
+            <button
+              onClick={handleBackToHome}
+              className="absolute top-4 right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+            >
+              Go Back
+            </button>
+          </div>
+
+          {/* Right Side - Start Button */}
+          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col items-center justify-center">
+            <div className="space-y-6 text-center">
               <div>
-                <h2 className="text-2xl font-semibold text-[#bef264]">Match found!</h2>
-                <p className="mt-2 text-sm text-[#9aa2c2]">
-                  Connecting you now…
+                <h3 className="text-lg font-semibold mb-2">Ready to Start?</h3>
+                <p className="text-sm text-[#9aa2c2]">
+                  {callMode === "VIDEO" 
+                    ? "Your camera is on. Click below to start searching for a match."
+                    : "Your microphone is ready. Click below to start searching for a match."}
                 </p>
+              </div>
+              
+              <button
+                onClick={handleStartSearch}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+              >
+                Start Searching
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Matching/Searching Page - Omegle Style */}
+      {(matchStatus === "searching" || matchStatus === "matched") && (
+        <div className="flex h-screen overflow-hidden">
+          {/* Left Side - Video Area */}
+          <div className="flex-1 relative bg-[#0b1018]">
+            {/* Top: Matching Status */}
+            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-6xl font-bold text-[#ffd447] animate-pulse">
+                  MATCHING
+                </h2>
+                <p className="mt-4 text-lg text-[#9aa2c2]">
+                  Looking for someone to connect with...
+                </p>
+                <p className="mt-2 text-sm text-[#64748b]">
+                  {formatTime(matchTimer)}
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom: Local Video Preview */}
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-4">
+              <div className="relative w-full max-w-md rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+                {callMode === "VIDEO" ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#111827]">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
+                    </div>
+                  </div>
+                )}
+                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                  You
+                </div>
+              </div>
+            </div>
+
+            {/* End Session Button */}
+            <button
+              onClick={handleStopSearch}
+              className="absolute top-4 right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+            >
+              End Session
+            </button>
+          </div>
+
+          {/* Right Side - User Info */}
+          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col">
+            {/* User Information */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{session.user?.name || "User"}</p>
+                      <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Matching Status in Center */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto h-16 w-16 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent mb-4" />
+                  <p className="text-2xl font-bold text-[#ffd447]">MATCHING</p>
+                  <p className="mt-2 text-sm text-[#9aa2c2]">
+                    {matchStatus === "matched" ? "Match found! Connecting..." : "Looking for clients..."}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex min-h-screen flex-col">
-          {/* Video/Audio Area */}
-          <div className="relative flex-1 bg-[#0b1018]">
-            {callMode === "VIDEO" ? (
-              <div className="grid h-full grid-cols-1 gap-4 p-4 md:grid-cols-2">
-                {/* Remote Video */}
-                <div className="relative flex items-center justify-center rounded-2xl border border-[#343d55] bg-[#050816]">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className="h-full w-full rounded-2xl object-cover"
-                  />
-                  {!isVideoEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#111827] text-2xl font-semibold">
-                        {session.user?.name?.charAt(0) || "?"}
+        <div className="flex h-screen overflow-hidden">
+          {/* Left Side - Video Area */}
+          <div className="flex-1 relative bg-[#0b1018]">
+            {/* Top: Remote Video */}
+            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-4">
+              <div className="relative w-full max-w-4xl rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+                {callMode === "VIDEO" ? (
+                  <>
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-cover"
+                    />
+                    {!isVideoEnabled && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
+                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                          {session.user?.name?.charAt(0) || "?"}
+                        </div>
                       </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#111827]">
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#1f2937] text-6xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
                     </div>
-                  )}
-                  <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
-                    {session.user?.name || "User"}
                   </div>
+                )}
+                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                  {session.user?.name || "User"}
                 </div>
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-4 py-2 text-xs font-medium backdrop-blur">
+                  {formatTime(callTimer)}
+                </div>
+              </div>
+            </div>
 
-                {/* Local Video */}
-                <div className="relative flex items-center justify-center rounded-2xl border border-[#343d55] bg-[#050816]">
+            {/* Bottom: Local Video */}
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-4">
+              <div className="relative w-full max-w-md rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+                {callMode === "VIDEO" ? (
                   <video
                     ref={localVideoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="h-full w-full rounded-2xl object-cover"
+                    className="h-full w-full object-cover"
                   />
-                  {!isVideoEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#111827] text-2xl font-semibold">
-                        You
-                      </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#111827]">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
                     </div>
-                  )}
-                  <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
-                    You
                   </div>
+                )}
+                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                  You
                 </div>
               </div>
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full border-4 border-[#343d55] bg-[#050816] text-4xl font-semibold">
-                    {session.user?.name?.charAt(0) || "?"}
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold">{session.user?.name || "User"}</p>
-                    <p className="text-sm text-[#9aa2c2]">Text chat mode</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Call Timer */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-4 py-2 text-xs font-medium backdrop-blur">
-              {formatTime(callTimer)}
             </div>
-          </div>
 
-          {/* Controls */}
-          <div className="border-t border-[#272f45] bg-[#0b1018] px-4 py-4">
-            <div className="mx-auto flex max-w-2xl items-center justify-center gap-3">
+            {/* Controls */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
               <button
                 onClick={toggleAudio}
                 className={`flex h-12 w-12 items-center justify-center rounded-full border transition ${
@@ -654,9 +859,30 @@ export default function MatchPage() {
               </button>
             </div>
           </div>
+
+          {/* Right Side - User Info */}
+          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{session.user?.name || "User"}</p>
+                      <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Ended State */}
       {matchStatus === "ended" && (
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
           <div className="mx-auto max-w-md space-y-6 text-center">
@@ -706,4 +932,3 @@ export default function MatchPage() {
     </div>
   );
 }
-
