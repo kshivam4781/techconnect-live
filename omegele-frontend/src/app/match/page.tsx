@@ -552,9 +552,66 @@ export default function MatchPage() {
 
   return (
     <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] overflow-hidden">
+      {/* Top Header - User Info and Options */}
+      <div className="absolute top-0 left-0 right-0 z-50 border-b border-[#272f45] bg-[#0b1018]/95 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+          {/* Left: Go Back Button */}
+          <button
+            onClick={() => {
+              if (matchStatus === "idle") {
+                router.push("/");
+              } else {
+                handleBackToHome();
+              }
+            }}
+            className="flex items-center gap-2 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="hidden sm:inline">Go Back</span>
+          </button>
+
+          {/* Center: User Info */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f2937] text-lg font-semibold">
+              {session?.user?.name?.charAt(0) || "?"}
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold">{session?.user?.name || "User"}</p>
+              <p className="text-xs text-[#9aa2c2] truncate max-w-[200px]">{session?.user?.email || ""}</p>
+            </div>
+          </div>
+
+          {/* Right: Options */}
+          <div className="flex items-center gap-2">
+            <a
+              href="/profile"
+              className="flex items-center gap-2 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+              title="Profile"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="hidden sm:inline">Profile</span>
+            </a>
+            <a
+              href="/"
+              className="flex items-center gap-2 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+              title="Home"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="hidden sm:inline">Home</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Configuration Page (Idle State) */}
       {matchStatus === "idle" && (
-        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
+        <div className="flex h-full items-center justify-center px-4 py-10 pt-20 overflow-hidden">
           <div className="mx-auto max-w-2xl space-y-6 text-center">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -638,7 +695,7 @@ export default function MatchPage() {
 
       {/* Permission Request Page */}
       {matchStatus === "permission" && (
-        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
+        <div className="flex h-full items-center justify-center px-4 py-10 pt-20 overflow-hidden">
           <div className="mx-auto max-w-md space-y-6 text-center">
             <div className="space-y-4">
               <div className="mx-auto h-24 w-24 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent" />
@@ -666,7 +723,7 @@ export default function MatchPage() {
 
       {/* Ready State - Video Preview with Start Button */}
       {matchStatus === "ready" && (
-        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full pt-16 overflow-hidden">
           {/* Left Side - Video Preview */}
           <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-4 min-h-0">
             <div className="relative w-full max-w-2xl rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
@@ -734,7 +791,7 @@ export default function MatchPage() {
 
       {/* Matching/Searching Page - Omegle Style */}
       {(matchStatus === "searching" || matchStatus === "matched") && (
-        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full pt-16 overflow-hidden">
           {/* Left Side - Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0">
             {/* Top: Matching Status - Fixed position with proper z-index */}
@@ -844,7 +901,7 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full pt-16 overflow-hidden">
           {/* Left Side - Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0">
             {/* Top: Remote Video */}
@@ -1060,7 +1117,7 @@ export default function MatchPage() {
 
       {/* Ended State */}
       {matchStatus === "ended" && (
-        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
+        <div className="flex h-full items-center justify-center px-4 py-10 pt-20 overflow-hidden">
           <div className="mx-auto max-w-md space-y-6 text-center">
             <div className="space-y-4">
               <div className="mx-auto h-24 w-24 rounded-full border-4 border-[#3b435a] bg-[#050816] flex items-center justify-center">
