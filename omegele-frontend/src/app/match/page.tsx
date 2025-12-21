@@ -9,6 +9,17 @@ import FlagModal from "@/components/FlagModal";
 
 type MatchStatus = "idle" | "permission" | "ready" | "searching" | "matched" | "in-call" | "ended";
 
+const matchingMessages = [
+  "Looking for your co-founder...",
+  "Looking for your hiring manager...",
+  "Looking for your mentor...",
+  "Looking for your next teammate...",
+  "Looking for your tech partner...",
+  "Looking for your advisor...",
+  "Looking for your collaborator...",
+  "Looking for your peer...",
+];
+
 export default function MatchPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -18,6 +29,7 @@ export default function MatchPage() {
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [matchTimer, setMatchTimer] = useState(0);
   const [callTimer, setCallTimer] = useState(0);
+  const [matchingMessageIndex, setMatchingMessageIndex] = useState(0);
   const [conversationDuration, setConversationDuration] = useState<number>(60);
   const [showName, setShowName] = useState<boolean>(true);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -31,6 +43,7 @@ export default function MatchPage() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const matchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const callIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const messageIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Socket and WebRTC hooks
   const {
@@ -98,23 +111,38 @@ export default function MatchPage() {
     fetchUserConfig();
   }, [session, status, router]);
 
-  // Timer for matching
+  // Timer for matching and rotating messages
   useEffect(() => {
     if (matchStatus === "searching") {
       matchIntervalRef.current = setInterval(() => {
         setMatchTimer((prev) => prev + 1);
       }, 1000);
+      
+      // Rotate matching messages every 2.5 seconds for better visibility
+      messageIntervalRef.current = setInterval(() => {
+        setMatchingMessageIndex((prev) => (prev + 1) % matchingMessages.length);
+      }, 2500);
     } else {
       if (matchIntervalRef.current) {
         clearInterval(matchIntervalRef.current);
         matchIntervalRef.current = null;
       }
+      if (messageIntervalRef.current) {
+        clearInterval(messageIntervalRef.current);
+        messageIntervalRef.current = null;
+      }
       setMatchTimer(0);
+      setMatchingMessageIndex(0);
     }
 
     return () => {
       if (matchIntervalRef.current) {
         clearInterval(matchIntervalRef.current);
+        matchIntervalRef.current = null;
+      }
+      if (messageIntervalRef.current) {
+        clearInterval(messageIntervalRef.current);
+        messageIntervalRef.current = null;
       }
     };
   }, [matchStatus]);
@@ -636,21 +664,31 @@ export default function MatchPage() {
               </div>
             </div>
 
-            {/* Back Button */}
-            <button
-              onClick={handleBackToHome}
-              className="absolute top-2 sm:top-4 right-2 sm:right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35] z-10"
-            >
-              Go Back
-            </button>
+            {/* Top Buttons - Mobile: Both buttons, Desktop: Only Go Back */}
+            <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between gap-2 z-10">
+              <button
+                onClick={handleBackToHome}
+                className="rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35]"
+              >
+                Go Back
+              </button>
+              
+              {/* Start Searching Button - Mobile only */}
+              <button
+                onClick={handleStartSearch}
+                className="md:hidden inline-flex h-9 sm:h-10 items-center justify-center rounded-full bg-[#ffd447] px-4 sm:px-6 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+              >
+                Start Searching
+              </button>
+            </div>
           </div>
 
-          {/* Right Side - Start Button */}
-          <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-[#272f45] bg-[#0b1018] p-4 sm:p-6 flex flex-col items-center justify-center">
-            <div className="space-y-4 sm:space-y-6 text-center">
+          {/* Right Side - Start Button (Desktop only) */}
+          <div className="hidden md:flex w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex-col items-center justify-center">
+            <div className="space-y-6 text-center">
               <div>
-                <h3 className="text-base sm:text-lg font-semibold mb-2">Ready to Start?</h3>
-                <p className="text-xs sm:text-sm text-[#9aa2c2]">
+                <h3 className="text-lg font-semibold mb-2">Ready to Start?</h3>
+                <p className="text-sm text-[#9aa2c2]">
                   {callMode === "VIDEO" 
                     ? "Your camera is on. Click below to start searching for a match."
                     : "Your microphone is ready. Click below to start searching for a match."}
@@ -659,7 +697,7 @@ export default function MatchPage() {
               
               <button
                 onClick={handleStartSearch}
-                className="inline-flex h-11 sm:h-12 items-center justify-center rounded-full bg-[#ffd447] px-6 sm:px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
               >
                 Start Searching
               </button>
@@ -673,14 +711,26 @@ export default function MatchPage() {
         <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
           {/* Left Side - Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0">
-            {/* Top: Matching Status */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-4">
-              <div className="text-center">
-                <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffd447] animate-pulse">
+            {/* Top: Matching Status - Fixed position with proper z-index */}
+            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-4 z-20 pointer-events-none">
+              <div className="text-center px-4">
+                {/* Animated Spinning Circle */}
+                <div className="mx-auto mb-4 sm:mb-6">
+                  <div className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 rounded-full border-4 border-[#ffd447] border-t-transparent animate-spin" />
+                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffd447] mb-3 sm:mb-4">
                   MATCHING
                 </h2>
-                <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-[#9aa2c2]">
-                  Looking for someone to connect with...
+                <p 
+                  key={matchingMessageIndex}
+                  className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-[#9aa2c2] min-h-[1.5rem] transition-all duration-500 ease-in-out"
+                  style={{
+                    animation: matchStatus === "searching" ? "fadeIn 0.5s ease-in-out" : "none"
+                  }}
+                >
+                  {matchStatus === "matched" 
+                    ? "Match found! Connecting..." 
+                    : matchingMessages[matchingMessageIndex]}
                 </p>
                 <p className="mt-2 text-xs sm:text-sm text-[#64748b]">
                   {formatTime(matchTimer)}
@@ -689,7 +739,7 @@ export default function MatchPage() {
             </div>
 
             {/* Bottom: Local Video Preview */}
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-2 sm:p-4">
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-2 sm:p-4 z-10">
               <div className="relative w-full max-w-md rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (
                   <video
@@ -715,7 +765,7 @@ export default function MatchPage() {
             {/* End Session Button */}
             <button
               onClick={handleStopSearch}
-              className="absolute top-2 sm:top-4 right-2 sm:right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35] z-10"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35] z-30 pointer-events-auto"
             >
               End Session
             </button>
@@ -743,10 +793,21 @@ export default function MatchPage() {
               {/* Matching Status in Center */}
               <div className="flex-1 flex items-center justify-center py-4 sm:py-0">
                 <div className="text-center">
-                  <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent mb-3 sm:mb-4" />
+                  {/* Animated Spinning Circle */}
+                  <div className="mx-auto mb-3 sm:mb-4">
+                    <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full border-4 border-[#ffd447] border-t-transparent animate-spin" />
+                  </div>
                   <p className="text-xl sm:text-2xl font-bold text-[#ffd447]">MATCHING</p>
-                  <p className="mt-2 text-xs sm:text-sm text-[#9aa2c2]">
-                    {matchStatus === "matched" ? "Match found! Connecting..." : "Looking for clients..."}
+                  <p 
+                    key={matchingMessageIndex}
+                    className="mt-2 text-xs sm:text-sm text-[#9aa2c2] min-h-[1.25rem] transition-all duration-500 ease-in-out"
+                    style={{
+                      animation: matchStatus === "searching" ? "fadeIn 0.5s ease-in-out" : "none"
+                    }}
+                  >
+                    {matchStatus === "matched" 
+                      ? "Match found! Connecting..." 
+                      : matchingMessages[matchingMessageIndex]}
                   </p>
                 </div>
               </div>
