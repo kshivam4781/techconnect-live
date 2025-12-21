@@ -67,7 +67,7 @@ export default function MatchPage() {
     roomId: currentRoomId,
     localVideoRef,
     remoteVideoRef,
-    enabled: (matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && (callMode === "VIDEO" || callMode === "AUDIO"),
+    enabled: (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && (callMode === "VIDEO" || callMode === "AUDIO"),
     audioOnly: callMode === "AUDIO",
   });
 
@@ -186,15 +186,24 @@ export default function MatchPage() {
     console.log("Match data:", matchData);
   }, [isConnected, matchStatus, matchData]);
 
+  // Track if we've already joined the queue to prevent infinite loops
+  const hasJoinedQueueRef = useRef(false);
+
   // Auto-retry joining queue when socket connects if we're searching
   useEffect(() => {
-    if (isConnected && matchStatus === "searching" && currentSessionId) {
-      // Socket just connected and we're searching, retry joining queue
+    if (isConnected && matchStatus === "searching" && currentSessionId && !hasJoinedQueueRef.current) {
+      // Socket just connected and we're searching, retry joining queue (only once)
       console.log("Socket connected while searching, retrying queue join");
+      hasJoinedQueueRef.current = true;
       const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
       joinQueue(currentSessionId, backendMode);
     }
-  }, [isConnected, matchStatus, currentSessionId, callMode, joinQueue]);
+    
+    // Reset the flag when we stop searching
+    if (matchStatus !== "searching") {
+      hasJoinedQueueRef.current = false;
+    }
+  }, [isConnected, matchStatus, currentSessionId, callMode]);
 
   // Fetch other user's information when match is found
   useEffect(() => {
@@ -278,6 +287,8 @@ export default function MatchPage() {
   useEffect(() => {
     if (matchData && matchStatus === "searching") {
       console.log("Match found! Setting up connection...", matchData);
+      hasJoinedQueueRef.current = false; // Reset queue join flag since we're matched
+      
       const matchId = matchData.matchId;
       setCurrentMatchId(matchId);
       setCurrentRoomId(matchData.roomId);
@@ -291,17 +302,21 @@ export default function MatchPage() {
         stream.getTracks().forEach((track) => {
           track.enabled = true;
         });
+        console.log("Local stream preserved, tracks:", stream.getTracks().length);
+      } else {
+        console.warn("No local stream found when match found, WebRTC hook should handle this");
       }
       
-      // Auto-transition to in-call after 2 seconds
+      // Auto-transition to in-call after 2 seconds to allow WebRTC to initialize
       setTimeout(() => {
-        console.log("Starting call with matchId:", matchId);
+        console.log("Starting call with matchId:", matchId, "roomId:", matchData.roomId);
         startCall(matchId);
         setMatchStatus("in-call");
         
         // Ensure streams are still attached after transition
         setTimeout(() => {
           if (localVideoRef.current && !localVideoRef.current.srcObject) {
+            console.log("Re-requesting local stream");
             // Re-request stream if lost
             navigator.mediaDevices.getUserMedia({
               video: callMode === "VIDEO",
@@ -309,12 +324,27 @@ export default function MatchPage() {
             }).then((stream) => {
               if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream;
+                localVideoRef.current.play().catch((err) => {
+                  console.error("Error playing local video after re-acquisition:", err);
+                });
               }
             }).catch((error) => {
               console.error("Error re-acquiring media:", error);
             });
           }
-        }, 500);
+          
+          // Check remote video
+          if (remoteVideoRef.current) {
+            console.log("Remote video element available, srcObject:", remoteVideoRef.current.srcObject ? "exists" : "null");
+            if (remoteVideoRef.current.srcObject) {
+              const stream = remoteVideoRef.current.srcObject as MediaStream;
+              console.log("Remote stream tracks:", stream.getTracks().length);
+              stream.getTracks().forEach((track) => {
+                console.log("Remote track:", track.kind, "enabled:", track.enabled, "readyState:", track.readyState);
+              });
+            }
+          }
+        }, 1000);
       }, 2000);
     }
   }, [matchData, matchStatus, startCall, callMode]);
@@ -369,6 +399,7 @@ export default function MatchPage() {
   const handleStartSearch = async () => {
     try {
       setMatchStatus("searching");
+      hasJoinedQueueRef.current = false; // Reset queue join flag
 
       // Map AUDIO to VIDEO for backend compatibility (we'll handle video off in UI)
       const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
@@ -427,27 +458,32 @@ export default function MatchPage() {
 
       try {
         await waitForConnection();
-        if (sessionData.sessionId) {
+        if (sessionData.sessionId && !hasJoinedQueueRef.current) {
           console.log("Joining queue with sessionId:", sessionData.sessionId, "mode:", backendMode);
+          hasJoinedQueueRef.current = true;
           joinQueue(sessionData.sessionId, backendMode);
         }
       } catch (error) {
         console.error("Error waiting for socket connection:", error);
         // Try to join anyway - joinQueue will queue the request if not connected
-        if (sessionData.sessionId) {
+        if (sessionData.sessionId && !hasJoinedQueueRef.current) {
           console.log("Attempting to join queue despite connection error");
+          hasJoinedQueueRef.current = true;
           joinQueue(sessionData.sessionId, backendMode);
         }
       }
     } catch (error) {
       console.error("Error starting match:", error);
       setMatchStatus("ready");
+      hasJoinedQueueRef.current = false;
       alert("Failed to start searching. Please try again.");
     }
   };
 
   const handleStopSearch = async () => {
     try {
+      hasJoinedQueueRef.current = false; // Reset queue join flag
+      
       if (currentSessionId) {
         await fetch("/api/session/end", {
           method: "POST",
@@ -831,8 +867,8 @@ export default function MatchPage() {
         <div className="flex flex-col md:flex-row h-full w-full pt-14 sm:pt-16 overflow-hidden">
           {/* Left Side - Video Preview */}
           <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-2 sm:p-4 min-h-0">
-            {/* Both Videos in Same Container - Stack on mobile, side by side on desktop */}
-            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+            {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
+            <div className="w-full max-w-4xl grid grid-cols-1 gap-2 sm:gap-4">
               {/* Your Video */}
               <div className="relative w-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (
@@ -918,8 +954,8 @@ export default function MatchPage() {
         <div className="flex flex-col md:flex-row h-full w-full pt-14 sm:pt-16 overflow-hidden">
           {/* Left Side - Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0 flex items-center justify-center p-2 sm:p-4">
-            {/* Both Videos in Same Container - Stack on mobile, side by side on desktop */}
-            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 relative">
+            {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
+            <div className="w-full max-w-4xl grid grid-cols-1 gap-2 sm:gap-4 relative">
               {/* Matching Status Overlay - Centered */}
               {(matchStatus === "searching" || matchStatus === "matched") && (
                 <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -1070,8 +1106,8 @@ export default function MatchPage() {
         <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden m-0 p-0">
           {/* Column 1: Video Area */}
           <div className="flex-1 relative bg-[#0b1018] min-h-0 flex items-center justify-center p-2 sm:p-4 border-b lg:border-b-0 lg:border-r border-[#272f45]">
-            {/* Both Videos in Same Container - Stack on mobile, side by side on desktop */}
-            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+            {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
+            <div className="w-full max-w-4xl grid grid-cols-1 gap-2 sm:gap-4">
               {/* Remote Video */}
               <div className="relative w-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (

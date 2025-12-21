@@ -201,11 +201,22 @@ export function useWebRTC({
           };
 
           // Create and send offer only if we don't have a local description
+          // Add a small delay to ensure both users are in the socket room
           if (pc.signalingState === "stable" && !pc.localDescription) {
             console.log("Creating offer for matchId:", matchId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit("webrtc-offer", { matchId, offer });
+            // Small delay to ensure socket room is set up
+            setTimeout(async () => {
+              try {
+                if (pc.signalingState === "stable" && !pc.localDescription) {
+                  const offer = await pc.createOffer();
+                  await pc.setLocalDescription(offer);
+                  console.log("Sending WebRTC offer for matchId:", matchId);
+                  socket.emit("webrtc-offer", { matchId, offer });
+                }
+              } catch (error) {
+                console.error("Error creating/sending offer:", error);
+              }
+            }, 500);
           } else {
             console.log("Peer connection already has offer or in progress, state:", pc.signalingState);
           }
