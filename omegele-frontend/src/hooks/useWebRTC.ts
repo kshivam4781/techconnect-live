@@ -131,7 +131,8 @@ export function useWebRTC({
                 console.log("Added track to remote stream:", track.kind, track.label);
               }
               
-              // Set stream to video element
+              // Try to set stream to video element if available
+              // If not available, it will be set when the element is rendered (handled by useEffect below)
               if (remoteVideoRef.current) {
                 console.log("Setting remote stream to video element, tracks:", remoteStream.getTracks().length);
                 remoteVideoRef.current.srcObject = remoteStream;
@@ -159,7 +160,7 @@ export function useWebRTC({
                   console.error("Error playing remote video:", err);
                 });
               } else {
-                console.warn("remoteVideoRef.current is null, cannot set stream");
+                console.log("remoteVideoRef.current is null, stream stored in ref. Will be set when element is available.");
               }
             };
 
@@ -292,20 +293,20 @@ export function useWebRTC({
   }, [socket, matchId]);
 
   // Ensure remote video is properly set up and playing
+  // This effect runs when the video element becomes available or when matchId/enabled changes
   useEffect(() => {
     if (!enabled || !matchId) return;
     
     const checkRemoteVideo = () => {
-      if (remoteVideoRef.current) {
+      if (remoteVideoRef.current && remoteStreamRef.current) {
         // Use remoteStreamRef if video element doesn't have a stream
-        if (!remoteVideoRef.current.srcObject && remoteStreamRef.current) {
-          console.log("Restoring remote stream to video element");
+        if (!remoteVideoRef.current.srcObject) {
+          console.log("Restoring remote stream to video element, tracks:", remoteStreamRef.current.getTracks().length);
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
         }
         
-        if (remoteVideoRef.current.srcObject) {
-          const stream = remoteVideoRef.current.srcObject as MediaStream;
-          
+        const stream = remoteVideoRef.current.srcObject as MediaStream;
+        if (stream) {
           // Ensure all tracks are enabled
           stream.getTracks().forEach((track) => {
             if (!track.enabled) {
@@ -322,7 +323,9 @@ export function useWebRTC({
           
           // Try to play if paused
           if (remoteVideoRef.current.paused) {
-            remoteVideoRef.current.play().catch((err) => {
+            remoteVideoRef.current.play().then(() => {
+              console.log("Remote video playing after restoration");
+            }).catch((err) => {
               console.error("Error playing remote video in check:", err);
             });
           }
@@ -333,8 +336,8 @@ export function useWebRTC({
     // Check immediately
     checkRemoteVideo();
     
-    // Check periodically to catch stream changes
-    const interval = setInterval(checkRemoteVideo, 1000);
+    // Check periodically to catch when element becomes available or stream changes
+    const interval = setInterval(checkRemoteVideo, 500);
     
     return () => clearInterval(interval);
   }, [matchId, enabled]);
