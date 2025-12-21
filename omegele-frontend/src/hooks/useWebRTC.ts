@@ -24,6 +24,7 @@ export function useWebRTC({
 }: UseWebRTCOptions) {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const handlersAttachedRef = useRef(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -112,29 +113,53 @@ export function useWebRTC({
           // Handle remote stream (set handlers only once when creating new connection)
           if (!handlersAttachedRef.current) {
             pc.ontrack = (event) => {
-              console.log("Received remote track:", event);
+              console.log("Received remote track:", event, "streams:", event.streams.length);
+              
+              // Get or create remote stream
+              let remoteStream = remoteStreamRef.current;
+              
+              if (!remoteStream || !event.streams[0]) {
+                // Create new stream or use the one from event
+                remoteStream = event.streams[0] || new MediaStream();
+                remoteStreamRef.current = remoteStream;
+              }
+              
+              // Add track to stream if not already present
+              const track = event.track;
+              if (track && !remoteStream.getTracks().includes(track)) {
+                remoteStream.addTrack(track);
+                console.log("Added track to remote stream:", track.kind, track.label);
+              }
+              
+              // Set stream to video element
               if (remoteVideoRef.current) {
-                const remoteStream = event.streams[0];
+                console.log("Setting remote stream to video element, tracks:", remoteStream.getTracks().length);
                 remoteVideoRef.current.srcObject = remoteStream;
+                
                 // Ensure audio is enabled and not muted
                 remoteVideoRef.current.muted = false;
                 if (remoteVideoRef.current.volume !== undefined) {
                   remoteVideoRef.current.volume = 1.0;
                 }
-                // Log audio tracks
+                
+                // Log all tracks
                 remoteStream.getAudioTracks().forEach((track) => {
-                  console.log("Remote audio track:", track.label, "enabled:", track.enabled);
+                  console.log("Remote audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
                   track.enabled = true;
                 });
-                // Log video tracks
                 remoteStream.getVideoTracks().forEach((track) => {
-                  console.log("Remote video track:", track.label, "enabled:", track.enabled);
+                  console.log("Remote video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
                   track.enabled = true;
                 });
+                
                 // Force play to ensure video and audio work
-                remoteVideoRef.current.play().catch((err) => {
+                remoteVideoRef.current.play().then(() => {
+                  console.log("Remote video playing successfully");
+                }).catch((err) => {
                   console.error("Error playing remote video:", err);
                 });
+              } else {
+                console.warn("remoteVideoRef.current is null, cannot set stream");
               }
             };
 
@@ -157,8 +182,17 @@ export function useWebRTC({
             console.log("Peer connection state:", pc.connectionState);
             if (pc.connectionState === "connected") {
               // Ensure remote video is playing when connected
-              if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
-                remoteVideoRef.current.play().catch((err) => {
+              if (remoteVideoRef.current) {
+                if (remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
+                  remoteVideoRef.current.srcObject = remoteStreamRef.current;
+                }
+                remoteVideoRef.current.muted = false;
+                if (remoteVideoRef.current.volume !== undefined) {
+                  remoteVideoRef.current.volume = 1.0;
+                }
+                remoteVideoRef.current.play().then(() => {
+                  console.log("Remote video playing after connection");
+                }).catch((err) => {
                   console.error("Error playing remote video after connection:", err);
                 });
               }
@@ -217,7 +251,19 @@ export function useWebRTC({
         const pc = peerConnectionRef.current;
         if (!pc) return;
 
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        // Check if we already have a remote description
+        if (pc.remoteDescription) {
+          console.log("Remote description already set, skipping answer. Current state:", pc.signalingState);
+          return;
+        }
+
+        // Only set if we're in the right state (have-local-offer)
+        if (pc.signalingState === "have-local-offer") {
+          console.log("Setting remote answer, current state:", pc.signalingState);
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        } else {
+          console.log("Cannot set remote answer, wrong signaling state:", pc.signalingState);
+        }
       } catch (error) {
         console.error("Error handling answer:", error);
       }
@@ -245,31 +291,50 @@ export function useWebRTC({
     };
   }, [socket, matchId]);
 
-  // Ensure remote video audio is enabled when stream changes
+  // Ensure remote video is properly set up and playing
   useEffect(() => {
-    const checkAudio = () => {
-      if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
-        const stream = remoteVideoRef.current.srcObject as MediaStream;
-        // Ensure all audio tracks are enabled
-        stream.getAudioTracks().forEach((track) => {
-          if (!track.enabled) {
-            track.enabled = true;
-            console.log("Enabled remote audio track:", track.label);
+    if (!enabled || !matchId) return;
+    
+    const checkRemoteVideo = () => {
+      if (remoteVideoRef.current) {
+        // Use remoteStreamRef if video element doesn't have a stream
+        if (!remoteVideoRef.current.srcObject && remoteStreamRef.current) {
+          console.log("Restoring remote stream to video element");
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+        
+        if (remoteVideoRef.current.srcObject) {
+          const stream = remoteVideoRef.current.srcObject as MediaStream;
+          
+          // Ensure all tracks are enabled
+          stream.getTracks().forEach((track) => {
+            if (!track.enabled) {
+              track.enabled = true;
+              console.log("Enabled remote track:", track.kind, track.label);
+            }
+          });
+          
+          // Ensure video element is not muted and volume is max
+          remoteVideoRef.current.muted = false;
+          if (remoteVideoRef.current.volume !== undefined) {
+            remoteVideoRef.current.volume = 1.0;
           }
-        });
-        // Ensure video element is not muted and volume is max
-        remoteVideoRef.current.muted = false;
-        if (remoteVideoRef.current.volume !== undefined) {
-          remoteVideoRef.current.volume = 1.0;
+          
+          // Try to play if paused
+          if (remoteVideoRef.current.paused) {
+            remoteVideoRef.current.play().catch((err) => {
+              console.error("Error playing remote video in check:", err);
+            });
+          }
         }
       }
     };
 
     // Check immediately
-    checkAudio();
+    checkRemoteVideo();
     
     // Check periodically to catch stream changes
-    const interval = setInterval(checkAudio, 1000);
+    const interval = setInterval(checkRemoteVideo, 1000);
     
     return () => clearInterval(interval);
   }, [matchId, enabled]);

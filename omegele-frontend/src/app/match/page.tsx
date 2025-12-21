@@ -857,12 +857,28 @@ export default function MatchPage() {
                       autoPlay
                       playsInline
                       muted={false}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover bg-[#111827]"
+                      onLoadedMetadata={() => {
+                        console.log("Remote video metadata loaded");
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.play().catch((err) => {
+                            console.error("Error playing remote video on metadata:", err);
+                          });
+                        }
+                      }}
+                      onCanPlay={() => {
+                        console.log("Remote video can play");
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.play().catch((err) => {
+                            console.error("Error playing remote video on canplay:", err);
+                          });
+                        }
+                      }}
                     />
-                    {!isVideoEnabled && (
+                    {(!remoteVideoRef.current?.srcObject || !isVideoEnabled) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
                         <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
-                          {session.user?.name?.charAt(0) || "?"}
+                          {otherUserId ? (session.user?.name?.charAt(0) || "?") : "?"}
                         </div>
                       </div>
                     )}
