@@ -438,9 +438,40 @@ export default function MatchPage() {
     }
   };
 
+  // Hide header and footer, prevent scrolling
+  useEffect(() => {
+    // Hide header and footer
+    const header = document.querySelector('header');
+    const footer = document.querySelector('footer');
+    const main = document.querySelector('main');
+    
+    if (header) header.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+    if (main) {
+      main.style.padding = '0';
+      main.style.margin = '0';
+    }
+    
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    return () => {
+      // Restore on unmount
+      if (header) header.style.display = '';
+      if (footer) footer.style.display = '';
+      if (main) {
+        main.style.padding = '';
+        main.style.margin = '';
+      }
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
+
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center">
+      <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center overflow-hidden">
         <p className="text-sm text-[#9aa2c2]">Loading…</p>
       </div>
     );
@@ -448,7 +479,7 @@ export default function MatchPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center px-4">
+      <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center px-4 overflow-hidden">
         <div className="max-w-md space-y-4 rounded-2xl border border-[#272f45] bg-[#0b1018] p-6 text-center">
           <h1 className="text-xl font-semibold">Sign in to start matching</h1>
           <p className="text-sm text-[#9aa2c2]">
@@ -466,10 +497,10 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050710] text-[#f8f3e8]">
+    <div className="fixed inset-0 h-screen w-screen bg-[#050710] text-[#f8f3e8] overflow-hidden">
       {/* Configuration Page (Idle State) */}
       {matchStatus === "idle" && (
-        <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
           <div className="mx-auto max-w-2xl space-y-6 text-center">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -553,7 +584,7 @@ export default function MatchPage() {
 
       {/* Permission Request Page */}
       {matchStatus === "permission" && (
-        <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
           <div className="mx-auto max-w-md space-y-6 text-center">
             <div className="space-y-4">
               <div className="mx-auto h-24 w-24 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent" />
@@ -581,10 +612,10 @@ export default function MatchPage() {
 
       {/* Ready State - Video Preview with Start Button */}
       {matchStatus === "ready" && (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
           {/* Left Side - Video Preview */}
-          <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-4">
-            <div className="relative w-full max-w-2xl rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+          <div className="flex-1 relative bg-[#0b1018] flex items-center justify-center p-4 min-h-0">
+            <div className="relative w-full max-w-2xl rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
               {callMode === "VIDEO" ? (
                 <video
                   ref={localVideoRef}
@@ -595,12 +626,12 @@ export default function MatchPage() {
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                  <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#1f2937] text-6xl font-semibold">
+                  <div className="flex h-24 w-24 sm:h-32 sm:w-32 items-center justify-center rounded-full bg-[#1f2937] text-4xl sm:text-6xl font-semibold">
                     {session.user?.name?.charAt(0) || "?"}
                   </div>
                 </div>
               )}
-              <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+              <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
                 You
               </div>
             </div>
@@ -608,18 +639,18 @@ export default function MatchPage() {
             {/* Back Button */}
             <button
               onClick={handleBackToHome}
-              className="absolute top-4 right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35] z-10"
             >
               Go Back
             </button>
           </div>
 
           {/* Right Side - Start Button */}
-          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col items-center justify-center">
-            <div className="space-y-6 text-center">
+          <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-[#272f45] bg-[#0b1018] p-4 sm:p-6 flex flex-col items-center justify-center">
+            <div className="space-y-4 sm:space-y-6 text-center">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Ready to Start?</h3>
-                <p className="text-sm text-[#9aa2c2]">
+                <h3 className="text-base sm:text-lg font-semibold mb-2">Ready to Start?</h3>
+                <p className="text-xs sm:text-sm text-[#9aa2c2]">
                   {callMode === "VIDEO" 
                     ? "Your camera is on. Click below to start searching for a match."
                     : "Your microphone is ready. Click below to start searching for a match."}
@@ -628,7 +659,7 @@ export default function MatchPage() {
               
               <button
                 onClick={handleStartSearch}
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
+                className="inline-flex h-11 sm:h-12 items-center justify-center rounded-full bg-[#ffd447] px-6 sm:px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
               >
                 Start Searching
               </button>
@@ -639,27 +670,27 @@ export default function MatchPage() {
 
       {/* Matching/Searching Page - Omegle Style */}
       {(matchStatus === "searching" || matchStatus === "matched") && (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
           {/* Left Side - Video Area */}
-          <div className="flex-1 relative bg-[#0b1018]">
+          <div className="flex-1 relative bg-[#0b1018] min-h-0">
             {/* Top: Matching Status */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center">
+            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-4">
               <div className="text-center">
-                <h2 className="text-6xl font-bold text-[#ffd447] animate-pulse">
+                <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold text-[#ffd447] animate-pulse">
                   MATCHING
                 </h2>
-                <p className="mt-4 text-lg text-[#9aa2c2]">
+                <p className="mt-2 sm:mt-4 text-sm sm:text-base md:text-lg text-[#9aa2c2]">
                   Looking for someone to connect with...
                 </p>
-                <p className="mt-2 text-sm text-[#64748b]">
+                <p className="mt-2 text-xs sm:text-sm text-[#64748b]">
                   {formatTime(matchTimer)}
                 </p>
               </div>
             </div>
 
             {/* Bottom: Local Video Preview */}
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-4">
-              <div className="relative w-full max-w-md rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-2 sm:p-4">
+              <div className="relative w-full max-w-md rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (
                   <video
                     ref={localVideoRef}
@@ -670,12 +701,12 @@ export default function MatchPage() {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                    <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
                       {session.user?.name?.charAt(0) || "?"}
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
                   You
                 </div>
               </div>
@@ -684,37 +715,37 @@ export default function MatchPage() {
             {/* End Session Button */}
             <button
               onClick={handleStopSearch}
-              className="absolute top-4 right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 rounded-full border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35] z-10"
             >
               End Session
             </button>
           </div>
 
           {/* Right Side - User Info */}
-          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col">
+          <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-[#272f45] bg-[#0b1018] p-4 sm:p-6 flex flex-col">
             {/* User Information */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
+                <h3 className="text-xs sm:text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#1f2937] text-lg sm:text-xl font-semibold">
                       {session.user?.name?.charAt(0) || "?"}
                     </div>
                     <div>
-                      <p className="font-semibold">{session.user?.name || "User"}</p>
-                      <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                      <p className="text-sm sm:text-base font-semibold">{session.user?.name || "User"}</p>
+                      <p className="text-xs text-[#9aa2c2] truncate">{session.user?.email || ""}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Matching Status in Center */}
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center py-4 sm:py-0">
                 <div className="text-center">
-                  <div className="mx-auto h-16 w-16 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent mb-4" />
-                  <p className="text-2xl font-bold text-[#ffd447]">MATCHING</p>
-                  <p className="mt-2 text-sm text-[#9aa2c2]">
+                  <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 animate-pulse rounded-full border-4 border-[#ffd447] border-t-transparent mb-3 sm:mb-4" />
+                  <p className="text-xl sm:text-2xl font-bold text-[#ffd447]">MATCHING</p>
+                  <p className="mt-2 text-xs sm:text-sm text-[#9aa2c2]">
                     {matchStatus === "matched" ? "Match found! Connecting..." : "Looking for clients..."}
                   </p>
                 </div>
@@ -726,23 +757,24 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
           {/* Left Side - Video Area */}
-          <div className="flex-1 relative bg-[#0b1018]">
+          <div className="flex-1 relative bg-[#0b1018] min-h-0">
             {/* Top: Remote Video */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-4">
-              <div className="relative w-full max-w-4xl rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+            <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center p-2 sm:p-4">
+              <div className="relative w-full max-w-4xl rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (
                   <>
                     <video
                       ref={remoteVideoRef}
                       autoPlay
                       playsInline
+                      muted={false}
                       className="h-full w-full object-cover"
                     />
                     {!isVideoEnabled && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
-                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                        <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
                           {session.user?.name?.charAt(0) || "?"}
                         </div>
                       </div>
@@ -750,23 +782,23 @@ export default function MatchPage() {
                   </>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#1f2937] text-6xl font-semibold">
+                    <div className="flex h-24 w-24 sm:h-32 sm:w-32 items-center justify-center rounded-full bg-[#1f2937] text-4xl sm:text-6xl font-semibold">
                       {session.user?.name?.charAt(0) || "?"}
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
                   {session.user?.name || "User"}
                 </div>
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-4 py-2 text-xs font-medium backdrop-blur">
+                <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 sm:px-4 py-1 sm:py-2 text-xs font-medium backdrop-blur">
                   {formatTime(callTimer)}
                 </div>
               </div>
             </div>
 
             {/* Bottom: Local Video */}
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-4">
-              <div className="relative w-full max-w-md rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+            <div className="absolute bottom-16 sm:bottom-20 md:bottom-0 left-0 right-0 h-1/2 flex items-end justify-center p-2 sm:p-4">
+              <div className="relative w-full max-w-md rounded-xl sm:rounded-2xl border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
                 {callMode === "VIDEO" ? (
                   <video
                     ref={localVideoRef}
@@ -777,29 +809,29 @@ export default function MatchPage() {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1f2937] text-4xl font-semibold">
+                    <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#1f2937] text-2xl sm:text-4xl font-semibold">
                       {session.user?.name?.charAt(0) || "?"}
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-3 py-1 text-xs font-medium backdrop-blur">
+                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-1 text-xs font-medium backdrop-blur">
                   You
                 </div>
               </div>
             </div>
 
             {/* Controls */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 z-10 flex-wrap justify-center max-w-full px-2">
               <button
                 onClick={toggleAudio}
-                className={`flex h-12 w-12 items-center justify-center rounded-full border transition ${
+                className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border transition ${
                   !isAudioEnabled
                     ? "border-red-500/50 bg-red-500/10 text-red-400"
-                    : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] hover:border-[#6471a3] hover:bg-[#151f35]"
+                    : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] active:border-[#6471a3] active:bg-[#151f35]"
                 }`}
               >
                 {!isAudioEnabled ? (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -814,7 +846,7 @@ export default function MatchPage() {
                     />
                   </svg>
                 ) : (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -828,14 +860,14 @@ export default function MatchPage() {
               {callMode === "VIDEO" && (
                 <button
                   onClick={toggleVideo}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full border transition ${
+                  className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border transition ${
                     !isVideoEnabled
                       ? "border-red-500/50 bg-red-500/10 text-red-400"
-                      : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] hover:border-[#6471a3] hover:bg-[#151f35]"
+                      : "border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] active:border-[#6471a3] active:bg-[#151f35]"
                   }`}
                 >
                   {isVideoEnabled ? (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -844,7 +876,7 @@ export default function MatchPage() {
                       />
                     </svg>
                   ) : (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -858,10 +890,10 @@ export default function MatchPage() {
 
               <button
                 onClick={handleFlag}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-400 transition hover:border-orange-500 hover:bg-orange-500/20"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-400 transition active:border-orange-500 active:bg-orange-500/20"
                 title="Report user"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -873,9 +905,9 @@ export default function MatchPage() {
 
               <button
                 onClick={handleSkip}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] text-[#f8f3e8] transition active:border-[#6471a3] active:bg-[#151f35]"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -887,9 +919,9 @@ export default function MatchPage() {
 
               <button
                 onClick={handleEndCall}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-red-500 text-white transition active:bg-red-600"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -902,7 +934,7 @@ export default function MatchPage() {
           </div>
 
           {/* Right Side - User Info */}
-          <div className="w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex flex-col">
+          <div className="hidden md:flex w-80 border-l border-[#272f45] bg-[#0b1018] p-6 flex-col">
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
@@ -925,7 +957,7 @@ export default function MatchPage() {
 
       {/* Ended State */}
       {matchStatus === "ended" && (
-        <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className="flex h-full items-center justify-center px-4 py-10 overflow-hidden">
           <div className="mx-auto max-w-md space-y-6 text-center">
             <div className="space-y-4">
               <div className="mx-auto h-24 w-24 rounded-full border-4 border-[#3b435a] bg-[#050816] flex items-center justify-center">

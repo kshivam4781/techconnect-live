@@ -86,6 +86,19 @@ export function useWebRTC({
             console.log("Received remote track:", event);
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = event.streams[0];
+              // Ensure audio is enabled and not muted
+              remoteVideoRef.current.muted = false;
+              if (remoteVideoRef.current.volume !== undefined) {
+                remoteVideoRef.current.volume = 1.0;
+              }
+              // Log audio tracks
+              event.streams[0].getAudioTracks().forEach((track) => {
+                console.log("Remote audio track:", track.label, "enabled:", track.enabled);
+              });
+              // Force play to ensure audio works
+              remoteVideoRef.current.play().catch((err) => {
+                console.error("Error playing remote video:", err);
+              });
             }
           };
 
@@ -180,6 +193,35 @@ export function useWebRTC({
       socket.off("webrtc-ice-candidate", handleIceCandidate);
     };
   }, [socket, matchId]);
+
+  // Ensure remote video audio is enabled when stream changes
+  useEffect(() => {
+    const checkAudio = () => {
+      if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+        const stream = remoteVideoRef.current.srcObject as MediaStream;
+        // Ensure all audio tracks are enabled
+        stream.getAudioTracks().forEach((track) => {
+          if (!track.enabled) {
+            track.enabled = true;
+            console.log("Enabled remote audio track:", track.label);
+          }
+        });
+        // Ensure video element is not muted and volume is max
+        remoteVideoRef.current.muted = false;
+        if (remoteVideoRef.current.volume !== undefined) {
+          remoteVideoRef.current.volume = 1.0;
+        }
+      }
+    };
+
+    // Check immediately
+    checkAudio();
+    
+    // Check periodically to catch stream changes
+    const interval = setInterval(checkAudio, 1000);
+    
+    return () => clearInterval(interval);
+  }, [matchId, enabled]);
 
   const toggleVideo = () => {
     if (localStreamRef.current) {
