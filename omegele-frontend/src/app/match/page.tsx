@@ -39,6 +39,9 @@ export default function MatchPage() {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [otherUserInfo, setOtherUserInfo] = useState<{ name: string; email: string; showName: boolean } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
+  const [otherUserLocation, setOtherUserLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [flagId, setFlagId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; userId: string; message: string; timestamp: Date; isOwn: boolean }>>([]);
@@ -276,6 +279,108 @@ export default function MatchPage() {
     return `${seconds}s`;
   };
 
+  // Function to get reverse geocoding (address from coordinates)
+  const getAddressFromCoordinates = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'TechConnect-App' // Required by Nominatim
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch address');
+      }
+      
+      const data = await response.json();
+      
+      if (data.address) {
+        const addr = data.address;
+        // Build a readable address string
+        const parts: string[] = [];
+        
+        if (addr.road) parts.push(addr.road);
+        if (addr.house_number) parts.push(addr.house_number);
+        if (addr.city || addr.town || addr.village) {
+          parts.push(addr.city || addr.town || addr.village);
+        }
+        if (addr.state) parts.push(addr.state);
+        if (addr.country) parts.push(addr.country);
+        if (addr.postcode) parts.push(addr.postcode);
+        
+        return parts.length > 0 ? parts.join(', ') : `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      }
+      
+      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    } catch (error) {
+      console.error('Error getting address:', error);
+      // Return coordinates as fallback
+      return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    }
+  };
+
+  // Function to request user location
+  const requestUserLocation = async (): Promise<{ latitude: number; longitude: number; address: string } | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        setLocationError("Geolocation is not supported by your browser");
+        resolve(null);
+        return;
+      }
+
+      const options: PositionOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0, // Always get fresh location
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log("Location obtained:", latitude, longitude);
+          
+          // Get address from coordinates
+          const address = await getAddressFromCoordinates(latitude, longitude);
+          console.log("Address:", address);
+          
+          const locationData = {
+            latitude,
+            longitude,
+            address,
+          };
+          
+          setUserLocation(locationData);
+          setLocationError(null);
+          resolve(locationData);
+        },
+        (error) => {
+          console.error("Location error:", error);
+          let errorMessage = "Failed to get location";
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Location permission denied. Please enable location access to continue.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location information unavailable.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Location request timed out.";
+              break;
+          }
+          
+          setLocationError(errorMessage);
+          resolve(null);
+        },
+        options
+      );
+    });
+  };
+
   // Debug: Log socket connection status
   useEffect(() => {
     console.log("Socket connected:", isConnected);
@@ -306,7 +411,55 @@ export default function MatchPage() {
     }
   }, [isConnected, matchStatus, currentSessionId, callMode]);
 
-  // Fetch other user's information when match is found
+  // Share location when match is found and save to database
+  useEffect(() => {
+    if (matchStatus === "matched" && currentMatchId && userLocation && socket) {
+      console.log("Sharing location with matched user:", userLocation);
+      
+      // Share via socket
+      socket.emit("share-location", {
+        matchId: currentMatchId,
+        location: userLocation,
+      });
+
+      // Save to database
+      fetch(`/api/matches/${currentMatchId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: userLocation,
+        }),
+      }).then((res) => {
+        if (res.ok) {
+          console.log("Location saved to database");
+        } else {
+          console.error("Failed to save location to database");
+        }
+      }).catch((error) => {
+        console.error("Error saving location to database:", error);
+      });
+    }
+  }, [matchStatus, currentMatchId, userLocation, socket]);
+
+  // Listen for other user's location
+  useEffect(() => {
+    if (!socket || !currentMatchId) return;
+
+    const handleLocationShare = (data: { matchId: string; location: { latitude: number; longitude: number; address: string } }) => {
+      if (data.matchId === currentMatchId) {
+        console.log("Received other user location:", data.location);
+        setOtherUserLocation(data.location);
+      }
+    };
+
+    socket.on("location-shared", handleLocationShare);
+
+    return () => {
+      socket.off("location-shared", handleLocationShare);
+    };
+  }, [socket, currentMatchId]);
+
+  // Fetch other user's information and location when match is found
   useEffect(() => {
     const fetchOtherUserInfo = async () => {
       if (!currentMatchId) return;
@@ -320,12 +473,28 @@ export default function MatchPage() {
           
           // Determine which user is the other user
           const otherUser = match.user1Id === currentUserId ? match.user2 : match.user1;
+          const isUser1 = match.user1Id === currentUserId;
           
           if (otherUser) {
             setOtherUserInfo({
               name: otherUser.name || "User",
               email: otherUser.email || "",
               showName: otherUser.showName ?? true,
+            });
+          }
+
+          // Set other user's location from database if available
+          if (isUser1 && match.user2Latitude && match.user2Longitude) {
+            setOtherUserLocation({
+              latitude: match.user2Latitude,
+              longitude: match.user2Longitude,
+              address: match.user2Address || `${match.user2Latitude.toFixed(6)}, ${match.user2Longitude.toFixed(6)}`,
+            });
+          } else if (!isUser1 && match.user1Latitude && match.user1Longitude) {
+            setOtherUserLocation({
+              latitude: match.user1Latitude,
+              longitude: match.user1Longitude,
+              address: match.user1Address || `${match.user1Latitude.toFixed(6)}, ${match.user1Longitude.toFixed(6)}`,
             });
           }
         }
@@ -391,6 +560,7 @@ export default function MatchPage() {
         setCurrentRoomId(null);
         setOtherUserId(null);
         setOtherUserInfo(null);
+        setOtherUserLocation(null);
         setCallTimer(0);
         setConversationTimer(null);
         setShowInfoPanel(false);
@@ -615,6 +785,16 @@ export default function MatchPage() {
 
   const handleStartSearch = async () => {
     try {
+      // Request location before starting search
+      setLocationError(null);
+      const location = await requestUserLocation();
+      
+      if (!location) {
+        // If location is denied or unavailable, show error but allow to continue
+        // User can still search, but location won't be shared
+        console.warn("Location not available, continuing without location");
+      }
+
       setMatchStatus("searching");
       hasJoinedQueueRef.current = false; // Reset queue join flag
 
@@ -1399,6 +1579,23 @@ export default function MatchPage() {
                       <p className="text-xs text-[#9aa2c2] truncate">{session.user?.email || ""}</p>
                     </div>
                   </div>
+                  {userLocation && (
+                    <div className="mt-3 pt-3 border-t border-[#272f45]">
+                      <div className="flex items-start gap-2">
+                        <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#9aa2c2] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
+                          <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
+                          <p className="text-xs text-[#64748b] mt-1">
+                            {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1760,6 +1957,23 @@ export default function MatchPage() {
                       <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
                     </div>
                   </div>
+                  {userLocation && (
+                    <div className="mt-3 pt-3 border-t border-[#272f45]">
+                      <div className="flex items-start gap-2">
+                        <svg className="h-4 w-4 text-[#9aa2c2] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
+                          <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
+                          <p className="text-xs text-[#64748b] mt-1">
+                            {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1787,6 +2001,23 @@ export default function MatchPage() {
                         )}
                       </div>
                     </div>
+                    {otherUserLocation && (
+                      <div className="mt-3 pt-3 border-t border-[#272f45]">
+                        <div className="flex items-start gap-2">
+                          <svg className="h-4 w-4 text-[#9aa2c2] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
+                            <p className="text-xs text-[#f8f3e8] break-words">{otherUserLocation.address}</p>
+                            <p className="text-xs text-[#64748b] mt-1">
+                              {otherUserLocation.latitude.toFixed(6)}, {otherUserLocation.longitude.toFixed(6)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1825,6 +2056,23 @@ export default function MatchPage() {
                           <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
                         </div>
                       </div>
+                      {userLocation && (
+                        <div className="mt-3 pt-3 border-t border-[#272f45]">
+                          <div className="flex items-start gap-2">
+                            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#9aa2c2] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
+                              <p className="text-xs text-[#f8f3e8] break-words">{userLocation.address}</p>
+                              <p className="text-xs text-[#64748b] mt-1">
+                                {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1852,6 +2100,23 @@ export default function MatchPage() {
                             )}
                           </div>
                         </div>
+                        {otherUserLocation && (
+                          <div className="mt-3 pt-3 border-t border-[#272f45]">
+                            <div className="flex items-start gap-2">
+                              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#9aa2c2] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-[#9aa2c2] mb-1">Location</p>
+                                <p className="text-xs text-[#f8f3e8] break-words">{otherUserLocation.address}</p>
+                                <p className="text-xs text-[#64748b] mt-1">
+                                  {otherUserLocation.latitude.toFixed(6)}, {otherUserLocation.longitude.toFixed(6)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

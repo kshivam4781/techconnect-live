@@ -288,6 +288,68 @@ export function setupSocketHandlers(io: SocketIOServer) {
       socket.broadcast.to(`match-${matchId}`).emit("webrtc-ice-candidate", { candidate });
     });
 
+    // Handle location sharing
+    socket.on("share-location", async (data: { matchId: string; location: { latitude: number; longitude: number; address: string } }) => {
+      try {
+        const { matchId, location } = data;
+
+        // Verify match exists and user is part of it
+        const match = await (prisma as any).match.findUnique({
+          where: { id: matchId },
+        });
+
+        if (!match) {
+          socket.emit("error", { message: "Match not found" });
+          return;
+        }
+
+        // Verify user is part of this match
+        if (match.user1Id !== userId && match.user2Id !== userId) {
+          socket.emit("error", { message: "Not authorized" });
+          return;
+        }
+
+        // Determine which user this is (user1 or user2)
+        const isUser1 = match.user1Id === userId;
+        
+        // Save location to database
+        const updateData: any = {};
+        if (isUser1) {
+          updateData.user1Latitude = location.latitude;
+          updateData.user1Longitude = location.longitude;
+          updateData.user1Address = location.address;
+        } else {
+          updateData.user2Latitude = location.latitude;
+          updateData.user2Longitude = location.longitude;
+          updateData.user2Address = location.address;
+        }
+
+        await (prisma as any).match.update({
+          where: { id: matchId },
+          data: updateData,
+        });
+
+        console.log(`Location saved to database for match ${matchId}, user: ${isUser1 ? 'user1' : 'user2'}`);
+
+        // Get the other user's socket IDs
+        const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
+        const otherUserSockets = userSockets.get(otherUserId);
+        
+        if (otherUserSockets) {
+          // Send location to the other user
+          otherUserSockets.forEach((sockId) => {
+            io.to(sockId).emit("location-shared", {
+              matchId,
+              location,
+            });
+          });
+        }
+      } catch (error: any) {
+        console.error("Error handling location share:", error);
+        socket.emit("error", { message: error.message || "Failed to share location" });
+      }
+    });
+
     // Handle chat messages
     socket.on("chat-message", async (data: { matchId: string; message: string }) => {
       try {

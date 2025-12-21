@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "Match" ADD COLUMN "user1Latitude" DOUBLE PRECISION,
+ADD COLUMN "user1Longitude" DOUBLE PRECISION,
+ADD COLUMN "user1Address" TEXT,
+ADD COLUMN "user2Latitude" DOUBLE PRECISION,
+ADD COLUMN "user2Longitude" DOUBLE PRECISION,
+ADD COLUMN "user2Address" TEXT;
+

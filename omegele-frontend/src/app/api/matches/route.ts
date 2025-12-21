@@ -87,6 +87,12 @@ export async function GET(request: Request) {
         endedAt: match.endedAt?.toISOString() || null,
         duration: match.duration,
         matchedTopics: match.matchedTopics,
+        user1Latitude: match.user1Latitude,
+        user1Longitude: match.user1Longitude,
+        user1Address: match.user1Address,
+        user2Latitude: match.user2Latitude,
+        user2Longitude: match.user2Longitude,
+        user2Address: match.user2Address,
       })),
       total,
       timeRange: {

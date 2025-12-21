@@ -161,6 +161,14 @@ model Match {
   // Matching criteria (for analytics)
   matchedTopics   String[] // Topics that matched
   
+  // Location data for both users
+  user1Latitude   Float?   // User1's latitude when match occurred
+  user1Longitude  Float?   // User1's longitude when match occurred
+  user1Address    String?  // User1's address (reverse geocoded)
+  user2Latitude   Float?   // User2's latitude when match occurred
+  user2Longitude  Float?   // User2's longitude when match occurred
+  user2Address    String?  // User2's address (reverse geocoded)
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
