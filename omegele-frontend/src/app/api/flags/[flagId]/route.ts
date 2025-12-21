@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { flagId: string } }
+  { params }: { params: Promise<{ flagId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions as any);
@@ -14,7 +14,7 @@ export async function PATCH(
     }
 
     const userId = (session as any).userId;
-    const { flagId } = params;
+    const { flagId } = await params;
     const body = await request.json();
     const { reason, category, status, adminNotes } = body as {
       reason?: string;

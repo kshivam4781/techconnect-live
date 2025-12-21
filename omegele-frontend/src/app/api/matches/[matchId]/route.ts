@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { matchId: string } }
+  { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions as any);
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const userId = (session as any).userId;
-    const { matchId } = params;
+    const { matchId } = await params;
 
     // Fetch match
     const match = await prisma.match.findUnique({
