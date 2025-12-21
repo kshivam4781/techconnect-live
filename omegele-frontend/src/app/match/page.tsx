@@ -190,6 +190,8 @@ export default function MatchPage() {
 
   // Track if we've already joined the queue to prevent infinite loops
   const hasJoinedQueueRef = useRef(false);
+  // Track if we're ending the call ourselves to prevent auto-rematch
+  const isEndingCallRef = useRef(false);
 
   // Auto-retry joining queue when socket connects if we're searching
   useEffect(() => {
@@ -276,6 +278,74 @@ export default function MatchPage() {
       setChatMessages([]);
     }
   }, [matchStatus]);
+
+  // Auto-rematch when other user disconnects
+  useEffect(() => {
+    if (!socket || !currentMatchId) return;
+
+    const handleCallEnded = (data: { matchId: string; reason?: string }) => {
+      // Only auto-rematch if we're currently in a call and the call ended
+      // Don't rematch if we ended it ourselves
+      if ((matchStatus === "in-call" || matchStatus === "matched") && data.matchId === currentMatchId && !isEndingCallRef.current) {
+        console.log("Other user disconnected or call ended, automatically starting new search...", data);
+        
+        // Clean up current match state
+        setCurrentMatchId(null);
+        setCurrentRoomId(null);
+        setOtherUserId(null);
+        setOtherUserInfo(null);
+        setCallTimer(0);
+        setShowInfoPanel(false);
+        setShowChatPanel(false);
+        setChatMessages([]);
+
+        // Small delay before starting new search to ensure cleanup
+        setTimeout(() => {
+          // Automatically start searching again
+          // Use the same call mode and session
+          if (currentSessionId && callMode) {
+            setMatchStatus("searching");
+            hasJoinedQueueRef.current = false;
+            const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
+            
+            // Update activity
+            fetch("/api/activity/update", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "SEARCHING", mode: backendMode }),
+            }).catch(console.error);
+
+            // Join queue again
+            if (isConnected) {
+              hasJoinedQueueRef.current = true;
+              joinQueue(currentSessionId, backendMode);
+            } else {
+              // Wait for connection
+              const checkConnection = setInterval(() => {
+                if (isConnected && currentSessionId) {
+                  clearInterval(checkConnection);
+                  hasJoinedQueueRef.current = true;
+                  joinQueue(currentSessionId, backendMode);
+                }
+              }, 500);
+              
+              // Cleanup after 30 seconds
+              setTimeout(() => clearInterval(checkConnection), 30000);
+            }
+          } else {
+            // If no session, go back to ready state
+            setMatchStatus("ready");
+          }
+        }, 500);
+      }
+    };
+
+    socket.on("call-ended", handleCallEnded);
+
+    return () => {
+      socket.off("call-ended", handleCallEnded);
+    };
+  }, [socket, currentMatchId, matchStatus, currentSessionId, callMode, isConnected, joinQueue]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -534,6 +604,8 @@ export default function MatchPage() {
 
   const handleEndCall = async () => {
     try {
+      isEndingCallRef.current = true; // Mark that we're ending the call
+      
       if (currentMatchId) {
         endCall(currentMatchId, "ended");
       }
@@ -555,14 +627,18 @@ export default function MatchPage() {
 
       setTimeout(() => {
         setMatchStatus("idle");
+        isEndingCallRef.current = false; // Reset flag after transition
       }, 2000);
     } catch (error) {
       console.error("Error ending call:", error);
+      isEndingCallRef.current = false;
     }
   };
 
   const handleSkip = async () => {
     try {
+      isEndingCallRef.current = true; // Mark that we're ending the call
+      
       if (currentMatchId) {
         endCall(currentMatchId, "skipped");
       }
@@ -581,8 +657,14 @@ export default function MatchPage() {
       setCallTimer(0);
       setShowInfoPanel(false);
       setShowChatPanel(false);
+      
+      // Reset flag after a delay
+      setTimeout(() => {
+        isEndingCallRef.current = false;
+      }, 1000);
     } catch (error) {
       console.error("Error skipping:", error);
+      isEndingCallRef.current = false;
     }
   };
 
@@ -1080,28 +1162,6 @@ export default function MatchPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Matching Status in Center */}
-              <div className="flex-1 flex items-center justify-center py-3 sm:py-4 md:py-0">
-                <div className="text-center">
-                  {/* Animated Spinning Circle */}
-                  <div className="mx-auto mb-2 sm:mb-3 md:mb-4">
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 rounded-full border-4 border-[#ffd447] border-t-transparent animate-spin" />
-                  </div>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-[#ffd447]">MATCHING</p>
-                  <p 
-                    key={matchingMessageIndex}
-                    className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#9aa2c2] min-h-[1.25rem] transition-all duration-500 ease-in-out"
-                    style={{
-                      animation: matchStatus === "searching" ? "fadeIn 0.5s ease-in-out" : "none"
-                    }}
-                  >
-                    {matchStatus === "matched" 
-                      ? "Match found! Connecting..." 
-                      : matchingMessages[matchingMessageIndex]}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1109,13 +1169,13 @@ export default function MatchPage() {
 
       {/* In-Call Page */}
       {matchStatus === "in-call" && (
-        <div className="relative h-full w-full overflow-hidden m-0 p-0">
-          {/* Main Video Area - Full Screen */}
-          <div className="h-full w-full relative bg-[#0b1018] flex items-center justify-center p-2 sm:p-4">
-            {/* Both Videos in Same Container - Stacked vertically (top and bottom) */}
-            <div className="w-full max-w-4xl grid grid-cols-1 gap-2 sm:gap-4">
-              {/* Remote Video */}
-              <div className="relative w-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+        <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden m-0 p-0">
+          {/* Column 1: Video Area - Desktop: 1/3, Mobile: Full */}
+          <div className="flex-1 relative bg-[#0b1018] min-h-0 flex flex-col p-2 sm:p-4 border-b lg:border-b-0 lg:border-r border-[#272f45]">
+            {/* Videos Container - Top half: Remote, Bottom half: Local */}
+            <div className="flex-1 flex flex-col gap-2 sm:gap-4 min-h-0">
+              {/* Remote Video - Top Half */}
+              <div className="flex-1 relative rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden min-h-0">
                 {callMode === "VIDEO" ? (
                   <>
                     <video
@@ -1161,8 +1221,8 @@ export default function MatchPage() {
                 </div>
               </div>
 
-              {/* Local Video */}
-              <div className="relative w-full rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden aspect-video">
+              {/* Local Video - Bottom Half */}
+              <div className="flex-1 relative rounded-lg border border-[#343d55] bg-[#050816] overflow-hidden min-h-0">
                 {callMode === "VIDEO" ? (
                   <video
                     ref={localVideoRef}
@@ -1189,8 +1249,8 @@ export default function MatchPage() {
               {formatTime(callTimer)}
             </div>
 
-            {/* Side Panel Toggle Buttons - Right Side */}
-            <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+            {/* Side Panel Toggle Buttons - Mobile Only */}
+            <div className="lg:hidden absolute top-4 right-4 flex flex-col gap-2 z-20">
               {/* User Info Button */}
               <button
                 onClick={() => {
@@ -1351,9 +1411,118 @@ export default function MatchPage() {
             </div>
           </div>
 
-          {/* User Info Side Panel */}
+          {/* Column 2: Chat Area - Desktop: 1/3, Mobile: Side Panel */}
+          <div className="hidden lg:flex flex-1 flex-col border-r border-[#272f45] bg-[#0b1018] min-w-0">
+            <div className="flex-1 flex flex-col h-full min-h-0">
+              {/* Chat Header */}
+              <div className="border-b border-[#272f45] p-4 flex-shrink-0">
+                <h3 className="text-sm font-medium text-[#f8f3e8]">Chat</h3>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-[#9aa2c2]">No messages yet. Start the conversation!</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                          msg.isOwn
+                            ? "bg-[#ffd447] text-[#18120b]"
+                            : "bg-[#1f2937] text-[#f8f3e8]"
+                        }`}
+                      >
+                        <p className="text-sm break-words">{msg.message}</p>
+                        <p className={`text-xs mt-1 ${msg.isOwn ? "text-[#18120b]/70" : "text-[#9aa2c2]"}`}>
+                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={chatMessagesEndRef} />
+              </div>
+
+              {/* Chat Input */}
+              <div className="border-t border-[#272f45] p-4 flex-shrink-0">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-4 py-2 text-sm text-[#f8f3e8] placeholder:text-[#9aa2c2] focus:outline-none focus:border-[#6471a3]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="rounded-lg bg-[#ffd447] px-4 py-2 text-sm font-semibold text-[#18120b] transition hover:bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 3: User Info - Desktop: 1/3, Mobile: Side Panel */}
+          <div className="hidden lg:flex flex-1 flex-col border-l border-[#272f45] bg-[#0b1018] min-w-0">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
+              {/* Your Information */}
+              <div>
+                <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Your Information</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                      {session.user?.name?.charAt(0) || "?"}
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold">{session.user?.name || "User"}</p>
+                      <p className="text-xs text-[#9aa2c2]">{session.user?.email || ""}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-[#272f45]"></div>
+
+              {/* Other User Information */}
+              {otherUserInfo && (
+                <div>
+                  <h3 className="text-sm font-medium text-[#9aa2c2] mb-2">Matched User</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f2937] text-xl font-semibold">
+                        {otherUserInfo.showName && otherUserInfo.name ? otherUserInfo.name.charAt(0) : "?"}
+                      </div>
+                      <div>
+                        <p className="text-base font-semibold">
+                          {otherUserInfo.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
+                        </p>
+                        {otherUserInfo.showName && otherUserInfo.email && (
+                          <p className="text-xs text-[#9aa2c2]">{otherUserInfo.email}</p>
+                        )}
+                        {!otherUserInfo.showName && (
+                          <p className="text-xs text-[#9aa2c2] italic">Name hidden by user</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile: User Info Side Panel */}
           {showInfoPanel && (
-            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
+            <div className="lg:hidden fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
               <div className="h-full flex flex-col">
                 {/* Panel Header */}
                 <div className="border-b border-[#272f45] p-4 flex items-center justify-between flex-shrink-0">
@@ -1418,9 +1587,9 @@ export default function MatchPage() {
             </div>
           )}
 
-          {/* Chat Side Panel */}
+          {/* Mobile: Chat Side Panel */}
           {showChatPanel && (
-            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
+            <div className="lg:hidden fixed inset-y-0 right-0 w-full sm:w-96 bg-[#0b1018] border-l border-[#272f45] z-30 shadow-2xl transform transition-transform duration-300 ease-in-out">
               <div className="h-full flex flex-col">
                 {/* Panel Header */}
                 <div className="border-b border-[#272f45] p-4 flex items-center justify-between flex-shrink-0">
