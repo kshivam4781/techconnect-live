@@ -342,32 +342,158 @@ export default function Home() {
             user signs in with LinkedIn or GitHub, and you can block or report
             anyone in one tap.
           </p>
-          <ul className="grid gap-4 sm:grid-cols-3">
-            <li className="rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                Verified sign-ins only
-              </p>
-              <p className="mt-1 text-xs text-[#d3dcec]">
-                No throwaway accounts. Each user is tied to a professional profile.
-              </p>
-            </li>
-            <li className="rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                One-tap block & report
-              </p>
-              <p className="mt-1 text-xs text-[#d3dcec]">
-                Quickly remove bad actors from your experience and flag issues.
-              </p>
-            </li>
-            <li className="rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                Clear community guidelines
-              </p>
-              <p className="mt-1 text-xs text-[#d3dcec]">
-                No harassment, hate, or spam. Repeat offenders are removed.
-              </p>
-            </li>
-          </ul>
+          
+          {/* Auto-scrolling Carousel */}
+          <div className="relative overflow-hidden">
+            {/* Gradient fade on left edge */}
+            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-20 bg-gradient-to-r from-[#050911] to-transparent" />
+            {/* Gradient fade on right edge */}
+            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-20 bg-gradient-to-l from-[#050911] to-transparent" />
+            <div 
+              className="flex gap-4" 
+              style={{ 
+                animation: "scroll 60s linear infinite",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.animationPlayState = "paused";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.animationPlayState = "running";
+              }}
+            >
+              {/* Duplicate items for seamless loop */}
+              {[...Array(2)].map((_, setIndex) => (
+                <div key={setIndex} className="flex gap-4">
+                  {/* Verified Identity */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd447]/20">
+                        <svg className="h-5 w-5 text-[#ffd447]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">Verified Identity</p>
+                        <p className="text-xs text-[#9aa2c2]">LinkedIn & GitHub OAuth</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Every user is authenticated through professional profiles. No anonymous accounts or throwaway identities.
+                    </p>
+                  </div>
+
+                  {/* Block & Report */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
+                        <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">One-Tap Block & Report</p>
+                        <p className="text-xs text-[#9aa2c2]">Instant Protection</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Quickly block or report anyone with a single tap. Bad actors are flagged and removed from the platform.
+                    </p>
+                  </div>
+
+                  {/* Screenshot Prevention */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
+                        <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">Screenshot Protection</p>
+                        <p className="text-xs text-[#9aa2c2]">Privacy First</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Advanced detection prevents screenshots and screen captures. Your conversations stay private and protected.
+                    </p>
+                  </div>
+
+                  {/* Right-Click Prevention */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
+                        <svg className="h-5 w-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">Right-Click Protection</p>
+                        <p className="text-xs text-[#9aa2c2]">Content Security</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Context menus and text selection are disabled to prevent unauthorized copying or saving of content.
+                    </p>
+                  </div>
+
+                  {/* DevTools Detection */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/20">
+                        <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">DevTools Detection</p>
+                        <p className="text-xs text-[#9aa2c2]">Active Monitoring</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Real-time monitoring detects developer tools and suspicious activity to protect your privacy.
+                    </p>
+                  </div>
+
+                  {/* Keyboard Shortcut Blocking */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20">
+                        <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">Shortcut Blocking</p>
+                        <p className="text-xs text-[#9aa2c2]">Print Screen & More</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      Print Screen, Snipping Tool shortcuts, and other screenshot methods are blocked to maintain privacy.
+                    </p>
+                  </div>
+
+                  {/* Account Accountability */}
+                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-500/20">
+                        <svg className="h-5 w-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#f8f3e8]">Account Accountability</p>
+                        <p className="text-xs text-[#9aa2c2]">Tracked Behavior</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#d3dcec]">
+                      User behavior is tracked. Repeat offenders and flagged accounts are automatically removed from the platform.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
