@@ -60,6 +60,7 @@ export default function MatchPage() {
   const [longerConversationRequestReceived, setLongerConversationRequestReceived] = useState<boolean>(false);
   const [isExtendedConversation, setIsExtendedConversation] = useState<boolean>(false);
   const [extendedDuration] = useState<number>(30 * 60); // 30 minutes in seconds
+  const [showScreenshotWarning, setShowScreenshotWarning] = useState<boolean>(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -250,6 +251,360 @@ export default function MatchPage() {
       }
     };
   }, [matchStatus]);
+
+  // Protection: Prevent right-click context menu (except in input fields)
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Allow right-click in input, textarea, and contenteditable elements
+      const isInputElement = 
+        target.tagName === "INPUT" || 
+        target.tagName === "TEXTAREA" || 
+        target.isContentEditable ||
+        target.closest("input, textarea, [contenteditable]");
+      
+      if (!isInputElement) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Allow text selection in input, textarea, and contenteditable elements
+      const isInputElement = 
+        target.tagName === "INPUT" || 
+        target.tagName === "TEXTAREA" || 
+        target.isContentEditable ||
+        target.closest("input, textarea, [contenteditable]");
+      
+      if (!isInputElement) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable right-click (except in input fields)
+    document.addEventListener("contextmenu", handleContextMenu);
+    // Disable text selection (except in input fields)
+    document.addEventListener("selectstart", handleSelectStart);
+    // Disable drag
+    document.addEventListener("dragstart", handleDragStart);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("selectstart", handleSelectStart);
+      document.removeEventListener("dragstart", handleDragStart);
+    };
+  }, []);
+
+  // Protection: Disable screenshot shortcuts and detect DevTools
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow shortcuts in input, textarea, and contenteditable elements
+      const target = e.target as HTMLElement;
+      const isInputElement = 
+        target.tagName === "INPUT" || 
+        target.tagName === "TEXTAREA" || 
+        target.isContentEditable ||
+        target.closest("input, textarea, [contenteditable]");
+
+      // Only block shortcuts outside of input fields
+      if (isInputElement) {
+        // Allow all shortcuts in input fields except DevTools shortcuts
+        if (e.key === "F12" || 
+            (e.key === "I" && e.ctrlKey && e.shiftKey) ||
+            (e.key === "J" && e.ctrlKey && e.shiftKey) ||
+            (e.key === "C" && e.ctrlKey && e.shiftKey)) {
+          e.preventDefault();
+          return false;
+        }
+        return; // Allow other shortcuts in input fields
+      }
+
+      // Disable Print Screen
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        return false;
+      }
+
+      // Try to detect Windows Snipping Tool shortcuts
+      // Win+Shift+S (Windows Snipping Tool)
+      if (e.key === "S" && e.shiftKey && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Alternative detection for Win+Shift+S
+      // Sometimes the Windows key is detected as metaKey
+      if (e.key === "s" || e.key === "S") {
+        if (e.shiftKey && (e.metaKey || (e.ctrlKey && e.altKey))) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+
+      // Disable F12 (DevTools)
+      if (e.key === "F12") {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+Shift+I (DevTools)
+      if (e.key === "I" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+Shift+J (Console)
+      if (e.key === "J" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+Shift+C (Inspect Element)
+      if (e.key === "C" && e.ctrlKey && e.shiftKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+U (View Source)
+      if (e.key === "U" && e.ctrlKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+S (Save Page)
+      if (e.key === "S" && e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+P (Print)
+      if (e.key === "P" && e.ctrlKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+A (Select All) - but allow in input fields (handled above)
+      if (e.key === "A" && e.ctrlKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+C (Copy) - but allow in input fields (handled above)
+      if (e.key === "C" && e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Disable Ctrl+X (Cut) - but allow in input fields (handled above)
+      if (e.key === "X" && e.ctrlKey) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // Detect DevTools opening (basic detection)
+    let devToolsOpen = false;
+    let alertShown = false;
+    const detectDevTools = () => {
+      const threshold = 160;
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      
+      if (widthThreshold || heightThreshold) {
+        if (!devToolsOpen) {
+          devToolsOpen = true;
+          console.warn("Developer tools detected. Please close them to continue.");
+          // Show warning only once per session to avoid being too intrusive
+          if (!alertShown) {
+            alertShown = true;
+            alert("Developer tools detected. Please close them to continue using the application.");
+          }
+        }
+      } else {
+        devToolsOpen = false;
+        // Reset alert flag when DevTools is closed
+        if (alertShown) {
+          alertShown = false;
+        }
+      }
+    };
+
+    // Monitor for DevTools
+    const devToolsInterval = setInterval(detectDevTools, 500);
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      clearInterval(devToolsInterval);
+    };
+  }, []);
+
+  // Protection: Detect Snipping Tool and screen capture attempts
+  useEffect(() => {
+    let blurTimeout: NodeJS.Timeout | null = null;
+    let lastBlurTime = 0;
+    let warningShown = false;
+
+    // Detect when window loses focus (might indicate snipping tool opening)
+    const handleBlur = () => {
+      lastBlurTime = Date.now();
+      // If window loses focus, it might be due to snipping tool
+      // Set a timeout to check if it's a quick switch (suspicious)
+      blurTimeout = setTimeout(() => {
+        // If window is still blurred after 500ms, it might be snipping tool
+        if (document.hidden && !warningShown) {
+          console.warn("Window lost focus - possible screenshot attempt");
+          // Don't show warning immediately, wait for visibility change
+        }
+      }, 500);
+    };
+
+    // Detect when window regains focus (user might have taken screenshot)
+    const handleFocus = () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+      
+      // If window was hidden for a short time and came back, might be snipping tool
+      const timeSinceBlur = Date.now() - lastBlurTime;
+      if (timeSinceBlur > 200 && timeSinceBlur < 5000 && !warningShown) {
+        // Suspicious: quick blur and return (typical of snipping tool usage)
+        warningShown = true;
+        setShowScreenshotWarning(true);
+        // Hide warning after 5 seconds
+        setTimeout(() => {
+          setShowScreenshotWarning(false);
+        }, 5000);
+        // Reset warning flag after some time
+        setTimeout(() => {
+          warningShown = false;
+        }, 30000); // Allow warning again after 30 seconds
+      }
+    };
+
+    // Detect visibility changes (page hidden/shown)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is hidden - might be switching to snipping tool
+        lastBlurTime = Date.now();
+      } else {
+        // Page is visible again
+        const timeSinceBlur = Date.now() - lastBlurTime;
+        if (timeSinceBlur > 200 && timeSinceBlur < 5000 && !warningShown) {
+          warningShown = true;
+          setShowScreenshotWarning(true);
+          setTimeout(() => {
+            setShowScreenshotWarning(false);
+          }, 5000);
+          setTimeout(() => {
+            warningShown = false;
+          }, 30000);
+        }
+      }
+    };
+
+    // Try to use Screen Capture API to detect screen sharing
+    // Note: This only works if the page tries to capture the screen
+    const detectScreenCapture = async () => {
+      try {
+        // Check if getDisplayMedia is available (indicates screen capture capability)
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === "function") {
+          // Monitor for any screen capture attempts
+          // This is a passive check - we can't prevent it, but we can detect it
+          // Note: We can't actually prevent external screen capture, only detect attempts
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    };
+
+    // Monitor clipboard for screenshot pastes (limited effectiveness)
+    const handlePaste = (e: ClipboardEvent) => {
+      // Check if clipboard contains image (might be from snipping tool)
+      if (e.clipboardData?.items) {
+        for (let i = 0; i < e.clipboardData.items.length; i++) {
+          const item = e.clipboardData.items[i];
+          if (item.type.indexOf("image") !== -1) {
+            // Image detected in clipboard - might be from snipping tool
+            // Only warn if not in an input field
+            const target = e.target as HTMLElement;
+            const isInputElement = 
+              target.tagName === "INPUT" || 
+              target.tagName === "TEXTAREA" || 
+              target.isContentEditable;
+            
+            if (!isInputElement && !warningShown) {
+              warningShown = true;
+              setShowScreenshotWarning(true);
+              setTimeout(() => {
+                setShowScreenshotWarning(false);
+              }, 5000);
+              setTimeout(() => {
+                warningShown = false;
+              }, 30000);
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("paste", handlePaste);
+
+    // Initial check
+    detectScreenCapture();
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("paste", handlePaste);
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+      }
+    };
+  }, []);
+
+  // Protection: Disable text selection via CSS
+  useEffect(() => {
+    // Add CSS to prevent text selection
+    const style = document.createElement("style");
+    style.textContent = `
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      input, textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // Timer for call (counts up) and conversation duration (counts down)
   useEffect(() => {
@@ -2850,6 +3205,38 @@ export default function MatchPage() {
         matchId={currentMatchId || ""}
         onFlagSubmit={handleFlagSubmit}
       />
+
+      {/* Screenshot Warning Overlay */}
+      {showScreenshotWarning && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="mx-4 max-w-md w-full rounded-xl border-2 border-red-500/50 bg-[#0b1018] p-6 text-center shadow-2xl">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
+                <svg
+                  className="h-8 w-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-[#f8f3e8]">
+              Screenshot Activity Detected
+            </h3>
+            <p className="text-sm text-[#9aa2c2]">
+              Please respect privacy and do not capture screenshots of conversations. 
+              Screenshotting is not allowed on this platform.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
