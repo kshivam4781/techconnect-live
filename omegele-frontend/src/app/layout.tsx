@@ -61,9 +61,6 @@ export default function RootLayout({
                   <a href="/guidelines" className="hover:text-[#ffd447]">
                     Guidelines
                   </a>
-                  <a href="/early-access" className="hover:text-[#ffd447]">
-                    Early access
-                  </a>
                   <a href="/feedback" className="hover:text-[#ffd447]">
                     Support
                   </a>
