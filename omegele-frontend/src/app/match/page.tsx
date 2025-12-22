@@ -55,6 +55,7 @@ export default function MatchPage() {
     reason?: string;
   } | null>(null);
   const [activeUsersCount, setActiveUsersCount] = useState<number | null>(null);
+  const [isStartingSearch, setIsStartingSearch] = useState<boolean>(false);
   const [longerConversationRequested, setLongerConversationRequested] = useState<boolean>(false);
   const [longerConversationRequestReceived, setLongerConversationRequestReceived] = useState<boolean>(false);
   const [isExtendedConversation, setIsExtendedConversation] = useState<boolean>(false);
@@ -595,10 +596,42 @@ export default function MatchPage() {
     };
 
     fetchActiveUsers();
-    // Update every 10 seconds
-    const interval = setInterval(fetchActiveUsers, 10000);
+    // Update every 5 seconds for more responsive updates
+    const interval = setInterval(fetchActiveUsers, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Update active users count when match status changes
+  useEffect(() => {
+    if (matchStatus === "searching" || matchStatus === "in-call") {
+      // Immediately fetch updated count when user starts searching or enters call
+      const fetchActiveUsers = async () => {
+        try {
+          const res = await fetch("/api/activity/stats");
+          const data = await res.json();
+          if (data.totalActive !== undefined) {
+            setActiveUsersCount(data.totalActive);
+          }
+        } catch (error) {
+          console.error("Error fetching active users:", error);
+        }
+      };
+      // Small delay to ensure activity update has been processed
+      const timeout = setTimeout(fetchActiveUsers, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [matchStatus]);
+
+  // Reset loading state when search successfully starts
+  useEffect(() => {
+    if (matchStatus === "searching") {
+      // Reset loading state after a short delay to ensure everything is set up
+      const timeout = setTimeout(() => {
+        setIsStartingSearch(false);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [matchStatus]);
 
   // Debug: Log socket connection status
   useEffect(() => {
@@ -1075,25 +1108,35 @@ export default function MatchPage() {
   };
 
   const handleStartSearch = async () => {
+    // Prevent multiple clicks
+    if (isStartingSearch) return;
+
     try {
+      setIsStartingSearch(true);
+
       // Check flag status before starting search
       if (flagStatus && !flagStatus.canSearch) {
+        setIsStartingSearch(false);
         alert(flagStatus.reason || "You cannot start a search at this time. Please contact support for assistance.");
         return;
       }
 
-      // Request location before starting search
-      setLocationError(null);
-      const location = await requestUserLocation();
-      
-      if (!location) {
-        // If location is denied or unavailable, show error but allow to continue
-        // User can still search, but location won't be shared
-        console.warn("Location not available, continuing without location");
-      }
-
+      // Immediately update status to show feedback
       setMatchStatus("searching");
       hasJoinedQueueRef.current = false; // Reset queue join flag
+
+      // Request location asynchronously (non-blocking)
+      setLocationError(null);
+      requestUserLocation().then((location) => {
+        if (!location) {
+          // If location is denied or unavailable, show error but allow to continue
+          // User can still search, but location won't be shared
+          console.warn("Location not available, continuing without location");
+        }
+      }).catch((error) => {
+        console.error("Error getting location:", error);
+        setLocationError("Location request failed. You can still search without location.");
+      });
 
       // Map AUDIO to VIDEO for backend compatibility (we'll handle video off in UI)
       const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
@@ -1170,6 +1213,8 @@ export default function MatchPage() {
           hasJoinedQueueRef.current = true;
           joinQueue(sessionData.sessionId, backendMode);
         }
+        // Reset loading state once we've successfully started
+        setIsStartingSearch(false);
       } catch (error) {
         console.error("Error waiting for socket connection:", error);
         // Try to join anyway - joinQueue will queue the request if not connected
@@ -1178,11 +1223,14 @@ export default function MatchPage() {
           hasJoinedQueueRef.current = true;
           joinQueue(sessionData.sessionId, backendMode);
         }
+        // Reset loading state even on error since we're still attempting to join
+        setIsStartingSearch(false);
       }
     } catch (error) {
       console.error("Error starting match:", error);
       setMatchStatus("ready");
       hasJoinedQueueRef.current = false;
+      setIsStartingSearch(false);
       alert("Failed to start searching. Please try again.");
     }
   };
@@ -1810,10 +1858,10 @@ export default function MatchPage() {
               {/* Start Searching Button - Mobile only */}
               <button
                 onClick={handleStartSearch}
-                disabled={flagStatus ? !flagStatus.canSearch : false}
+                disabled={(flagStatus ? !flagStatus.canSearch : false) || isStartingSearch}
                 className="md:hidden inline-flex h-8 sm:h-9 items-center justify-center rounded-full bg-[#ffd447] px-3 sm:px-4 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500"
               >
-                Start Searching
+                {isStartingSearch ? "Starting..." : "Start Searching"}
               </button>
             </div>
           </div>
@@ -1832,10 +1880,10 @@ export default function MatchPage() {
               
               <button
                 onClick={handleStartSearch}
-                disabled={flagStatus ? !flagStatus.canSearch : false}
+                disabled={(flagStatus ? !flagStatus.canSearch : false) || isStartingSearch}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-[#ffd447] px-8 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500"
               >
-                Start Searching
+                {isStartingSearch ? "Starting..." : "Start Searching"}
               </button>
             </div>
           </div>
