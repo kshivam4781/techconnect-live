@@ -92,6 +92,7 @@ type UserResponse = {
     image: string | null;
     initialConversationDuration: number | null;
     showName: boolean | null;
+    termsAcceptedAt: string | null;
   } | null;
 };
 
@@ -327,6 +328,26 @@ export default function ProfilePage() {
                 Status:{" "}
                 <span className="font-semibold text-[#bef264]">Verified</span>
               </p>
+              {user?.termsAcceptedAt && (
+                <div className="mt-3 pt-3 border-t border-[#272f45]">
+                  <p className="font-medium text-[#f8f3e8] mb-2">Legal Agreements</p>
+                  <p>
+                    Terms Accepted:{" "}
+                    <span className="font-semibold text-[#bef264]">
+                      {new Date(user.termsAcceptedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-[#9aa2c2] mt-1">
+                    You accepted our Terms & Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy on this date.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-[#343d55]">

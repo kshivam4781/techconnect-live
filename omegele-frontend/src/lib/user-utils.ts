@@ -18,6 +18,7 @@ export async function canUserSearch(userId: string): Promise<{
       isBlocked: true,
       blockedReason: true,
       blockedAt: true,
+      termsAcceptedAt: true,
     },
   });
 
@@ -27,6 +28,16 @@ export async function canUserSearch(userId: string): Promise<{
       reason: "User not found",
       flagCount: 0,
       isBlocked: true,
+    };
+  }
+
+  // Check if user has accepted terms and conditions
+  if (!user.termsAcceptedAt) {
+    return {
+      canSearch: false,
+      reason: "You must accept the Terms and Conditions before using this service. Please complete your onboarding and accept the terms.",
+      flagCount: user.flagCount,
+      isBlocked: false,
     };
   }
 

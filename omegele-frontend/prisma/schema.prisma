@@ -68,6 +68,7 @@ model User {
   onboarded                    Boolean    @default(false)
   initialConversationDuration Int?       @default(60) // Duration in seconds, min 60, max 300 (1-5 minutes)
   showName                     Boolean    @default(true) // Whether to show name to matched users
+  termsAcceptedAt              DateTime?  // When user accepted terms and conditions
   
   // Flagging and blocking
   flagCount                    Int        @default(0) // Total number of flags received (cached count)

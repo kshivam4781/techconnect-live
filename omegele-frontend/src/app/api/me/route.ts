@@ -37,12 +37,13 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { topics, seniority, goals, initialConversationDuration, showName } = body as {
+    const { topics, seniority, goals, initialConversationDuration, showName, acceptTerms } = body as {
       topics?: string[];
       seniority?: string | null;
       goals?: string | null;
       initialConversationDuration?: number | null;
       showName?: boolean;
+      acceptTerms?: boolean;
     };
 
     // Validate conversation duration (60-300 seconds)
@@ -51,18 +52,38 @@ export async function PATCH(request: Request) {
       validatedDuration = Math.max(60, Math.min(300, Math.round(initialConversationDuration)));
     }
 
+    // If terms acceptance is provided, set the timestamp
+    const updateData: any = {
+      topics: topics ?? undefined,
+      seniority: seniority
+        ? (seniority.toUpperCase().replace(/-/g, "_") as any)
+        : undefined,
+      goals: goals ?? undefined,
+      initialConversationDuration: validatedDuration,
+      onboarded: true,
+    };
+
+    // Only update termsAcceptedAt if acceptTerms is true and it's not already set
+    if (acceptTerms === true) {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: (session as any).userId },
+        select: { id: true },
+      });
+      
+      // Check if terms were already accepted by querying the full user
+      const fullUser = await prisma.user.findUnique({
+        where: { id: (session as any).userId },
+      });
+      
+      // Only set if not already accepted (to preserve original acceptance date)
+      if (fullUser && !(fullUser as any).termsAcceptedAt) {
+        updateData.termsAcceptedAt = new Date();
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: (session as any).userId },
-      data: {
-        topics: topics ?? undefined,
-        seniority: seniority
-          ? (seniority.toUpperCase().replace(/-/g, "_") as any)
-          : undefined,
-        goals: goals ?? undefined,
-        initialConversationDuration: validatedDuration,
-        // Removed showName since it does not exist on the type
-        onboarded: true,
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ user });

@@ -104,6 +104,7 @@ type UserResponse = {
     goals: string | null;
     onboarded: boolean;
     name: string | null;
+    termsAcceptedAt: string | null;
   } | null;
 };
 
@@ -118,6 +119,7 @@ export default function OnboardingPage() {
   const [topics, setTopics] = useState<string[]>([]);
   const [seniority, setSeniority] = useState<string | null>(null);
   const [goals, setGoals] = useState<string>("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -136,6 +138,10 @@ export default function OnboardingPage() {
           setTopics(data.user.topics ?? []);
           setSeniority(data.user.seniority);
           setGoals(data.user.goals || "");
+          // If user already accepted terms, set checkbox to checked
+          if (data.user.termsAcceptedAt) {
+            setTermsAccepted(true);
+          }
 
           if (data.user.onboarded) {
             router.push("/");
@@ -174,6 +180,7 @@ export default function OnboardingPage() {
           topics,
           seniority,
           goals: goals.trim() || null,
+          acceptTerms: termsAccepted,
         }),
       });
 
@@ -337,6 +344,67 @@ export default function OnboardingPage() {
               </div>
             </section>
 
+            <section className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Terms and Conditions</p>
+                <p className="text-xs text-[#9aa2c2]">
+                  Please read and accept our terms and conditions to continue.
+                </p>
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-[#3b435a] bg-[#050816] text-[#ffd447] focus:ring-2 focus:ring-[#ffd447] focus:ring-offset-0 focus:ring-offset-[#0b1018] cursor-pointer"
+                  />
+                  <span className="text-xs text-[#d3dcec] group-hover:text-[#f8f3e8]">
+                    I have read and agree to the{" "}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#ffd447] hover:underline"
+                    >
+                      Terms and Conditions
+                    </a>
+                    ,{" "}
+                    <a
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#ffd447] hover:underline"
+                    >
+                      Privacy Policy
+                    </a>
+                    ,{" "}
+                    <a
+                      href="/acceptable-use"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#ffd447] hover:underline"
+                    >
+                      Acceptable Use Policy
+                    </a>
+                    , and{" "}
+                    <a
+                      href="/cookies"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#ffd447] hover:underline"
+                    >
+                      Cookie Policy
+                    </a>
+                    . I understand that I am using this service at my own risk.
+                  </span>
+                </label>
+                {!termsAccepted && (
+                  <p className="text-xs text-red-400">
+                    You must accept the terms and conditions to create an account.
+                  </p>
+                )}
+              </div>
+            </section>
+
             <div className="space-y-3">
               {error && (
                 <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400">
@@ -349,7 +417,7 @@ export default function OnboardingPage() {
                 </p>
                 <button
                   type="button"
-                  disabled={saving || topics.length === 0 || !seniority}
+                  disabled={saving || topics.length === 0 || !seniority || !termsAccepted}
                   onClick={handleSubmit}
                   className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] disabled:cursor-not-allowed disabled:opacity-60"
                 >

@@ -55,6 +55,9 @@ export default function RootLayout({
                   <a href="/about" className="hover:text-[#ffd447]">
                     About
                   </a>
+                  <a href="/use-case" className="hover:text-[#ffd447]">
+                    Use Case
+                  </a>
                   <a href="/guidelines" className="hover:text-[#ffd447]">
                     Guidelines
                   </a>
@@ -62,7 +65,7 @@ export default function RootLayout({
                     Early access
                   </a>
                   <a href="/feedback" className="hover:text-[#ffd447]">
-                    Feedback
+                    Support
                   </a>
                 </div>
                 <UserMenu />
@@ -100,6 +103,11 @@ export default function RootLayout({
                     <li>
                       <a href="/about" className="hover:text-[#ffd447]">
                         How it works
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/use-case" className="hover:text-[#ffd447]">
+                        Use Cases
                       </a>
                     </li>
                     <li>
@@ -149,14 +157,24 @@ export default function RootLayout({
                       </a>
                     </li>
                     <li>
-                      <a href="/about" className="hover:text-[#ffd447]">
-                        Privacy & terms (beta)
+                      <a href="/acceptable-use" className="hover:text-[#ffd447]">
+                        Acceptable Use Policy
                       </a>
                     </li>
                     <li>
-                      <span className="cursor-default text-[#9aa2c2]">
-                        Cookie & data usage
-                      </span>
+                      <a href="/terms" className="hover:text-[#ffd447]">
+                        Terms & Conditions
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/privacy" className="hover:text-[#ffd447]">
+                        Privacy Policy
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/cookies" className="hover:text-[#ffd447]">
+                        Cookie Policy
+                      </a>
                     </li>
                   </ul>
                 </div>
