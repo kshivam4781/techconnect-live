@@ -13,9 +13,22 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER || "shivam@skytransportsolutions.com",
     pass: process.env.SMTP_PASSWORD || "bzpalynezkmjlfuc",
   },
+  tls: {
+    // Do not fail on invalid certificates
+    rejectUnauthorized: false,
+  },
+  // Connection timeout
+  connectionTimeout: 10000, // 10 seconds
+  // Socket timeout
+  socketTimeout: 10000, // 10 seconds
+  // Debug mode in development
+  debug: process.env.NODE_ENV === "development",
+  logger: process.env.NODE_ENV === "development",
 });
 
 export async function POST(request: Request) {
+  let feedbackId: string | null = null;
+  
   try {
     const session = await getServerSession(authOptions as any);
     if (!session || !(session as any).userId) {
@@ -57,6 +70,31 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Map category to enum
+    const categoryMap: Record<string, "GENERAL" | "TECHNICAL" | "FEATURE" | "BUG" | "OTHER"> = {
+      general: "GENERAL",
+      technical: "TECHNICAL",
+      feature: "FEATURE",
+      bug: "BUG",
+      other: "OTHER",
+    };
+
+    const feedbackCategory = categoryMap[category.toLowerCase()] || "OTHER";
+
+    // MANDATORY: Save feedback to database first
+    const feedback = await prisma.feedback.create({
+      data: {
+        userId,
+        category: feedbackCategory,
+        technicalPage: category === "technical" ? technicalPage : null,
+        message: message.trim(),
+        emailSent: false,
+      },
+    });
+
+    feedbackId = feedback.id;
+    console.log(`Feedback saved to database with ID: ${feedbackId}`);
 
     // Format user information for email
     const userInfo = `
@@ -189,30 +227,80 @@ The TechConnect Live Team
     const fromEmail = process.env.SMTP_USER || "shivam@skytransportsolutions.com";
     const adminEmail = process.env.ADMIN_EMAIL || "shivam@skytransportsolutions.com";
 
-    // Send email to user
-    if (user.email) {
+    // Try to send emails (non-blocking - feedback is already saved)
+    let emailError: string | null = null;
+    let emailSent = false;
+
+    try {
+      // Verify SMTP connection first
+      await transporter.verify();
+      console.log("SMTP connection verified successfully");
+
+      // Send email to user
+      if (user.email) {
+        await transporter.sendMail({
+          from: fromEmail,
+          to: user.email,
+          cc: adminEmail,
+          subject: "Thank You for Your Feedback - TechConnect Live",
+          text: userEmailText,
+          html: userEmailHtml,
+        });
+        console.log(`Thank you email sent to user: ${user.email}`);
+      }
+
+      // Send email to admin
       await transporter.sendMail({
         from: fromEmail,
-        to: user.email,
-        cc: adminEmail,
-        subject: "Thank You for Your Feedback - TechConnect Live",
-        text: userEmailText,
-        html: userEmailHtml,
+        to: adminEmail,
+        subject: `New Feedback: ${category.charAt(0).toUpperCase() + category.slice(1)} - TechConnect Live`,
+        text: adminEmailText,
+        html: adminEmailHtml,
       });
+      console.log(`Admin notification email sent to: ${adminEmail}`);
+
+      emailSent = true;
+    } catch (emailErr: any) {
+      emailError = emailErr.message || "Unknown email error";
+      console.error("Error sending email:", emailErr);
+      // Don't fail the request - feedback is already saved
     }
 
-    // Send email to admin
-    await transporter.sendMail({
-      from: fromEmail,
-      to: adminEmail,
-      subject: `New Feedback: ${category.charAt(0).toUpperCase() + category.slice(1)} - TechConnect Live`,
-      text: adminEmailText,
-      html: adminEmailHtml,
+    // Update feedback record with email status
+    await prisma.feedback.update({
+      where: { id: feedbackId },
+      data: {
+        emailSent,
+        emailSentAt: emailSent ? new Date() : null,
+        emailError: emailError || null,
+      },
     });
 
-    return NextResponse.json({ success: true, message: "Feedback submitted successfully" });
+    // Return success even if email failed (feedback is saved)
+    return NextResponse.json({
+      success: true,
+      message: "Feedback submitted successfully",
+      feedbackId,
+      emailSent,
+      emailError: emailError || undefined,
+    });
   } catch (error: any) {
     console.error("Error submitting feedback:", error);
+    
+    // If we have a feedback ID, try to update it with the error
+    if (feedbackId) {
+      try {
+        await prisma.feedback.update({
+          where: { id: feedbackId },
+          data: {
+            emailError: error.message || "Failed to process feedback",
+          },
+        });
+      } catch (updateError) {
+        console.error("Failed to update feedback with error:", updateError);
+      }
+    }
+
     return NextResponse.json(
       {
         error: error.message || "Failed to submit feedback",

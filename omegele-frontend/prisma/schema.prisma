@@ -86,6 +86,7 @@ model User {
   matchesAsUser2  Match[] @relation("MatchesAsUser2")
   flagsCreated    Flag[]  @relation("FlagsCreated")    // Flags this user created
   flagsReceived   Flag[]  @relation("FlagsReceived")    // Flags against this user
+  feedbacks       Feedback[]                            // Feedback submissions from this user
 }
 
 model Account {
@@ -226,5 +227,36 @@ model Flag {
   @@index([matchId])
   @@index([status, flaggedAt])
   @@index([flaggedAt])
+}
+
+enum FeedbackCategory {
+  GENERAL
+  TECHNICAL
+  FEATURE
+  BUG
+  OTHER
+}
+
+model Feedback {
+  id              String           @id @default(cuid())
+  userId          String           // User who submitted feedback
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Feedback details
+  category        FeedbackCategory // GENERAL, TECHNICAL, FEATURE, BUG, OTHER
+  technicalPage   String?          // Page name if category is TECHNICAL (e.g., "searching", "video-call", etc.)
+  message         String           // User's feedback message
+  
+  // Email tracking
+  emailSent       Boolean          @default(false) // Whether confirmation email was sent
+  emailSentAt     DateTime?        // When email was sent
+  emailError      String?          // Error message if email failed
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  @@index([userId, createdAt])
+  @@index([category, createdAt])
+  @@index([createdAt])
 }
 
