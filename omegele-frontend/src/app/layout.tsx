@@ -61,6 +61,9 @@ export default function RootLayout({
                   <a href="/early-access" className="hover:text-[#ffd447]">
                     Early access
                   </a>
+                  <a href="/feedback" className="hover:text-[#ffd447]">
+                    Feedback
+                  </a>
                 </div>
                 <UserMenu />
               </nav>
