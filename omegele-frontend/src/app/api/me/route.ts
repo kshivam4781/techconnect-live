@@ -45,6 +45,12 @@ export async function PATCH(request: Request) {
       showName?: boolean;
     };
 
+    // Validate conversation duration (60-300 seconds)
+    let validatedDuration: number | undefined = undefined;
+    if (initialConversationDuration !== null && initialConversationDuration !== undefined) {
+      validatedDuration = Math.max(60, Math.min(300, Math.round(initialConversationDuration)));
+    }
+
     const user = await prisma.user.update({
       where: { id: (session as any).userId },
       data: {
@@ -53,6 +59,7 @@ export async function PATCH(request: Request) {
           ? (seniority.toUpperCase().replace(/-/g, "_") as any)
           : undefined,
         goals: goals ?? undefined,
+        initialConversationDuration: validatedDuration,
         // Removed showName since it does not exist on the type
         onboarded: true,
       },

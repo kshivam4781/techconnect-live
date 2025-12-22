@@ -125,7 +125,9 @@ export default function ProfilePage() {
           setTopics(data.user.topics ?? []);
           setSeniority(data.user.seniority);
           setGoals(data.user.goals || "");
-          setInitialConversationDuration(data.user.initialConversationDuration ?? 60);
+          // Clamp conversation duration between 60-300 seconds
+          const duration = data.user.initialConversationDuration ?? 60;
+          setInitialConversationDuration(Math.max(60, Math.min(300, duration)));
           setShowName(data.user.showName ?? true);
         }
       } catch (err) {
@@ -442,25 +444,27 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <p className="text-[11px] text-[#9aa2c2]">
-                  How long should your initial conversation be? (Maximum: 1 minute)
+                  How long should your initial conversation be? (60 seconds - 5 minutes)
                 </p>
                 <div className="space-y-2">
                   <input
                     type="range"
-                    min="10"
-                    max="60"
-                    step="5"
+                    min="60"
+                    max="300"
+                    step="15"
                     value={initialConversationDuration}
-                    onChange={(e) => setInitialConversationDuration(Number(e.target.value))}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setInitialConversationDuration(Math.max(60, Math.min(300, value)));
+                    }}
                     className="w-full h-2 bg-[#050816] rounded-lg appearance-none cursor-pointer accent-[#ffd447]"
                   />
                   <div className="flex justify-between text-[10px] text-[#64748b]">
-                    <span>10s</span>
-                    <span>20s</span>
-                    <span>30s</span>
-                    <span>40s</span>
-                    <span>50s</span>
                     <span>60s</span>
+                    <span>120s</span>
+                    <span>180s</span>
+                    <span>240s</span>
+                    <span>300s</span>
                   </div>
                 </div>
               </div>

@@ -168,6 +168,18 @@ export function useSocket() {
     }
   };
 
+  const requestLongerConversation = (matchId: string) => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit("request-longer-conversation", { matchId });
+    }
+  };
+
+  const respondToLongerConversation = (matchId: string, accepted: boolean) => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit("respond-longer-conversation", { matchId, accepted });
+    }
+  };
+
   return {
     socket: socketRef.current,
     isConnected,
@@ -180,6 +192,8 @@ export function useSocket() {
     sendWebRTCAnswer,
     sendWebRTCIceCandidate,
     sendChatMessage,
+    requestLongerConversation,
+    respondToLongerConversation,
   };
 }
 

@@ -54,6 +54,11 @@ export default function MatchPage() {
     isBlocked: boolean;
     reason?: string;
   } | null>(null);
+  const [activeUsersCount, setActiveUsersCount] = useState<number | null>(null);
+  const [longerConversationRequested, setLongerConversationRequested] = useState<boolean>(false);
+  const [longerConversationRequestReceived, setLongerConversationRequestReceived] = useState<boolean>(false);
+  const [isExtendedConversation, setIsExtendedConversation] = useState<boolean>(false);
+  const [extendedDuration] = useState<number>(30 * 60); // 30 minutes in seconds
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -71,6 +76,8 @@ export default function MatchPage() {
     startCall,
     endCall,
     sendChatMessage,
+    requestLongerConversation,
+    respondToLongerConversation,
   } = useSocket();
 
   const { isVideoEnabled, isAudioEnabled, toggleVideo, toggleAudio, peerConnectionState } = useWebRTC({
@@ -108,6 +115,9 @@ export default function MatchPage() {
             setShowInfoPanel(false);
             setShowChatPanel(false);
             setChatMessages([]);
+            setIsExtendedConversation(false);
+            setLongerConversationRequested(false);
+            setLongerConversationRequestReceived(false);
 
             setTimeout(() => {
               if (sessionId && mode) {
@@ -184,7 +194,9 @@ export default function MatchPage() {
             router.push("/onboarding");
             return;
           }
-          setConversationDuration(data.user.initialConversationDuration ?? 60);
+          // Clamp conversation duration between 60-300 seconds
+          const duration = data.user.initialConversationDuration ?? 60;
+          setConversationDuration(Math.max(60, Math.min(300, duration)));
           setShowName(data.user.showName ?? true);
           
           // Set flag status
@@ -243,7 +255,7 @@ export default function MatchPage() {
     if (matchStatus === "in-call") {
       // Initialize conversation timer when call starts
       if (conversationTimer === null) {
-        setConversationTimer(conversationDuration);
+        setConversationTimer(isExtendedConversation ? extendedDuration : conversationDuration);
       }
       
       callIntervalRef.current = setInterval(() => {
@@ -271,6 +283,10 @@ export default function MatchPage() {
       }
       setCallTimer(0);
       setConversationTimer(null);
+      // Reset extended conversation state when call ends
+      setIsExtendedConversation(false);
+      setLongerConversationRequested(false);
+      setLongerConversationRequestReceived(false);
     }
 
     return () => {
@@ -278,7 +294,7 @@ export default function MatchPage() {
         clearInterval(callIntervalRef.current);
       }
     };
-  }, [matchStatus, conversationDuration, conversationTimer]);
+  }, [matchStatus, conversationDuration, conversationTimer, isExtendedConversation, extendedDuration]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -564,6 +580,26 @@ export default function MatchPage() {
     });
   };
 
+  // Fetch active users count
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      try {
+        const res = await fetch("/api/activity/stats");
+        const data = await res.json();
+        if (data.totalActive !== undefined) {
+          setActiveUsersCount(data.totalActive);
+        }
+      } catch (error) {
+        console.error("Error fetching active users:", error);
+      }
+    };
+
+    fetchActiveUsers();
+    // Update every 10 seconds
+    const interval = setInterval(fetchActiveUsers, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Debug: Log socket connection status
   useEffect(() => {
     console.log("Socket connected:", isConnected);
@@ -715,6 +751,46 @@ export default function MatchPage() {
       socket.off("chat-message", handleChatMessage);
     };
   }, [socket, currentMatchId, session]);
+
+  // Handle longer conversation requests and responses
+  useEffect(() => {
+    if (!socket || !currentMatchId) return;
+
+    const handleLongerConversationRequested = (data: { matchId: string; requestedBy: string }) => {
+      if (data.matchId === currentMatchId) {
+        setLongerConversationRequestReceived(true);
+        // Auto-open info panel to show the request
+        setShowInfoPanel(true);
+      }
+    };
+
+    const handleLongerConversationAccepted = (data: { matchId: string; respondedBy: string }) => {
+      if (data.matchId === currentMatchId) {
+        setIsExtendedConversation(true);
+        setLongerConversationRequestReceived(false);
+        setLongerConversationRequested(false);
+        // Reset timer to 30 minutes
+        setConversationTimer(extendedDuration);
+      }
+    };
+
+    const handleLongerConversationDenied = (data: { matchId: string; respondedBy: string }) => {
+      if (data.matchId === currentMatchId) {
+        setLongerConversationRequestReceived(false);
+        setLongerConversationRequested(false);
+      }
+    };
+
+    socket.on("longer-conversation-requested", handleLongerConversationRequested);
+    socket.on("longer-conversation-accepted", handleLongerConversationAccepted);
+    socket.on("longer-conversation-denied", handleLongerConversationDenied);
+
+    return () => {
+      socket.off("longer-conversation-requested", handleLongerConversationRequested);
+      socket.off("longer-conversation-accepted", handleLongerConversationAccepted);
+      socket.off("longer-conversation-denied", handleLongerConversationDenied);
+    };
+  }, [socket, currentMatchId, extendedDuration]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -1184,6 +1260,9 @@ export default function MatchPage() {
       setConversationTimer(null);
       setShowInfoPanel(false);
       setShowChatPanel(false);
+      setIsExtendedConversation(false);
+      setLongerConversationRequested(false);
+      setLongerConversationRequestReceived(false);
 
       setTimeout(() => {
         setMatchStatus("idle");
@@ -1218,6 +1297,9 @@ export default function MatchPage() {
       setConversationTimer(null);
       setShowInfoPanel(false);
       setShowChatPanel(false);
+      setIsExtendedConversation(false);
+      setLongerConversationRequested(false);
+      setLongerConversationRequestReceived(false);
       
       // Reset flag after a delay
       setTimeout(() => {
@@ -1251,6 +1333,9 @@ export default function MatchPage() {
       setShowInfoPanel(false);
       setShowChatPanel(false);
       setChatMessages([]);
+      setIsExtendedConversation(false);
+      setLongerConversationRequested(false);
+      setLongerConversationRequestReceived(false);
 
       // Small delay before starting new search to ensure cleanup
       setTimeout(async () => {
@@ -1358,6 +1443,31 @@ export default function MatchPage() {
     }
   };
 
+  const handleRequestLongerConversation = () => {
+    if (!currentMatchId || longerConversationRequested || isExtendedConversation) return;
+    
+    requestLongerConversation(currentMatchId);
+    setLongerConversationRequested(true);
+  };
+
+  const handleAcceptLongerConversation = () => {
+    if (!currentMatchId) return;
+    
+    respondToLongerConversation(currentMatchId, true);
+    setIsExtendedConversation(true);
+    setLongerConversationRequestReceived(false);
+    setLongerConversationRequested(false);
+    // Reset timer to 30 minutes
+    setConversationTimer(extendedDuration);
+  };
+
+  const handleDenyLongerConversation = () => {
+    if (!currentMatchId) return;
+    
+    respondToLongerConversation(currentMatchId, false);
+    setLongerConversationRequestReceived(false);
+  };
+
   // Hide header and footer, prevent scrolling
   useEffect(() => {
     // Hide header and footer
@@ -1438,7 +1548,7 @@ export default function MatchPage() {
             <span className="hidden sm:inline">Go Back</span>
           </button>
 
-          {/* Center: User Info */}
+          {/* Center: User Info and Active Users Count */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#1f2937] text-sm sm:text-lg font-semibold">
               {session?.user?.name?.charAt(0) || "?"}
@@ -1447,6 +1557,16 @@ export default function MatchPage() {
               <p className="text-sm font-semibold">{session?.user?.name || "User"}</p>
               <p className="text-xs text-[#9aa2c2] truncate max-w-[120px] md:max-w-[200px]">{session?.user?.email || ""}</p>
             </div>
+            {/* Active Users Count */}
+            {activeUsersCount !== null && (
+              <div className="ml-2 sm:ml-4 flex items-center gap-2 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 sm:px-4 py-1.5 sm:py-2">
+                <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-[#bef264]" />
+                <div className="flex flex-col">
+                  <span className="text-sm sm:text-base font-semibold text-[#f8f3e8]">{activeUsersCount}</span>
+                  <span className="text-[10px] sm:text-xs text-[#9aa2c2] hidden sm:inline">active now</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right: Options */}
@@ -1973,9 +2093,19 @@ export default function MatchPage() {
             <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-2 sm:px-3 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-10 flex items-center gap-2">
               {conversationTimer !== null && conversationTimer > 0 ? (
                 <>
-                  <span className={conversationTimer <= 10 ? "text-red-400 animate-pulse" : "text-[#ffd447]"}>
-                    {formatCountdown(conversationTimer)}
+                  <span className={
+                    isExtendedConversation 
+                      ? (conversationTimer <= 120 ? "text-red-400 animate-pulse" : "text-[#ffd447]")
+                      : (conversationTimer <= 10 ? "text-red-400 animate-pulse" : "text-[#ffd447]")
+                  }>
+                    {isExtendedConversation 
+                      ? formatTime(conversationTimer)
+                      : formatCountdown(conversationTimer)
+                    }
                   </span>
+                  {isExtendedConversation && conversationTimer <= 120 && (
+                    <span className="text-red-400 text-[10px]">(Cannot extend)</span>
+                  )}
                   <span className="text-[#9aa2c2]">•</span>
                   <span className="text-[#9aa2c2]">{formatTime(callTimer)}</span>
                 </>
@@ -2100,6 +2230,43 @@ export default function MatchPage() {
                   )}
                 </button>
               )}
+
+              <button
+                onClick={handleRequestLongerConversation}
+                disabled={
+                  longerConversationRequested || 
+                  isExtendedConversation || 
+                  (conversationTimer !== null && conversationTimer <= 10 && !isExtendedConversation) ||
+                  (conversationTimer !== null && conversationTimer <= 120 && isExtendedConversation)
+                }
+                className={`flex h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full border transition ${
+                  isExtendedConversation
+                    ? "border-green-500/50 bg-green-500/10 text-green-400 cursor-not-allowed opacity-50"
+                    : longerConversationRequested
+                    ? "border-blue-500/50 bg-blue-500/10 text-blue-400 cursor-not-allowed opacity-50"
+                    : (conversationTimer !== null && conversationTimer <= 10 && !isExtendedConversation)
+                    ? "border-gray-500/50 bg-gray-500/10 text-gray-400 cursor-not-allowed opacity-50"
+                    : "border-blue-500/50 bg-blue-500/10 text-blue-400 active:border-blue-500 active:bg-blue-500/20"
+                }`}
+                title={
+                  isExtendedConversation 
+                    ? "Conversation extended to 30 minutes" 
+                    : longerConversationRequested 
+                    ? "Request sent" 
+                    : (conversationTimer !== null && conversationTimer <= 10 && !isExtendedConversation)
+                    ? "Too late to request extension"
+                    : "Request longer conversation (30 min)"
+                }
+              >
+                <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </button>
 
               <button
                 onClick={handleFlag}
@@ -2303,6 +2470,55 @@ export default function MatchPage() {
                   </div>
                 </div>
               )}
+
+              {/* Longer Conversation Request Notification */}
+              {longerConversationRequestReceived && (
+                <div className="mt-4 pt-4 border-t border-[#272f45]">
+                  <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-blue-400 mb-1">Longer Conversation Request</p>
+                        <p className="text-xs text-[#9aa2c2] mb-3">
+                          The other user wants to extend this conversation to 30 minutes. Would you like to accept?
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleAcceptLongerConversation}
+                            className="flex-1 rounded-lg bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600 active:bg-blue-700"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={handleDenyLongerConversation}
+                            className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 py-2 text-xs font-semibold text-[#f8f3e8] transition hover:bg-[#151f35] active:bg-[#1a253a]"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Extended Conversation Status */}
+              {isExtendedConversation && (
+                <div className="mt-4 pt-4 border-t border-[#272f45]">
+                  <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-3">
+                    <div className="flex items-center gap-2">
+                      <svg className="h-4 w-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-xs font-medium text-green-400">
+                        Conversation extended to 30 minutes
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2399,6 +2615,55 @@ export default function MatchPage() {
                             </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Longer Conversation Request Notification */}
+                  {longerConversationRequestReceived && (
+                    <div className="mt-4 pt-4 border-t border-[#272f45]">
+                      <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <svg className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-blue-400 mb-1">Longer Conversation Request</p>
+                            <p className="text-xs text-[#9aa2c2] mb-3">
+                              The other user wants to extend this conversation to 30 minutes. Would you like to accept?
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleAcceptLongerConversation}
+                                className="flex-1 rounded-lg bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600 active:bg-blue-700"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={handleDenyLongerConversation}
+                                className="flex-1 rounded-lg border border-[#3b435a] bg-[#0f1729] px-3 py-2 text-xs font-semibold text-[#f8f3e8] transition hover:bg-[#151f35] active:bg-[#1a253a]"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Extended Conversation Status */}
+                  {isExtendedConversation && (
+                    <div className="mt-4 pt-4 border-t border-[#272f45]">
+                      <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-3">
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-xs font-medium text-green-400">
+                            Conversation extended to 30 minutes
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}

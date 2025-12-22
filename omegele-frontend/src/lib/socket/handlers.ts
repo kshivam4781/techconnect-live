@@ -409,6 +409,97 @@ export function setupSocketHandlers(io: SocketIOServer) {
       }
     });
 
+    // Handle longer conversation request
+    socket.on("request-longer-conversation", async (data: { matchId: string }) => {
+      try {
+        const { matchId } = data;
+
+        // Verify match exists and user is part of it
+        const match = await (prisma as any).match.findUnique({
+          where: { id: matchId },
+        });
+
+        if (!match) {
+          socket.emit("error", { message: "Match not found" });
+          return;
+        }
+
+        // Verify user is part of this match
+        if (match.user1Id !== userId && match.user2Id !== userId) {
+          socket.emit("error", { message: "Not authorized" });
+          return;
+        }
+
+        // Get the other user's socket IDs
+        const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
+        const otherUserSockets = userSockets.get(otherUserId);
+        
+        if (otherUserSockets) {
+          // Send request to the other user
+          otherUserSockets.forEach((sockId) => {
+            io.to(sockId).emit("longer-conversation-requested", {
+              matchId,
+              requestedBy: userId,
+            });
+          });
+        }
+      } catch (error: any) {
+        console.error("Error handling longer conversation request:", error);
+        socket.emit("error", { message: error.message || "Failed to request longer conversation" });
+      }
+    });
+
+    // Handle longer conversation accept/deny
+    socket.on("respond-longer-conversation", async (data: { matchId: string; accepted: boolean }) => {
+      try {
+        const { matchId, accepted } = data;
+
+        // Verify match exists and user is part of it
+        const match = await (prisma as any).match.findUnique({
+          where: { id: matchId },
+        });
+
+        if (!match) {
+          socket.emit("error", { message: "Match not found" });
+          return;
+        }
+
+        // Verify user is part of this match
+        if (match.user1Id !== userId && match.user2Id !== userId) {
+          socket.emit("error", { message: "Not authorized" });
+          return;
+        }
+
+        // Get the other user's socket IDs
+        const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
+        const otherUserSockets = userSockets.get(otherUserId);
+        
+        if (otherUserSockets) {
+          // Notify the requester
+          otherUserSockets.forEach((sockId) => {
+            io.to(sockId).emit(accepted ? "longer-conversation-accepted" : "longer-conversation-denied", {
+              matchId,
+              respondedBy: userId,
+            });
+          });
+        }
+
+        // Also notify the responder
+        const responderSockets = userSockets.get(userId);
+        if (responderSockets) {
+          responderSockets.forEach((sockId) => {
+            io.to(sockId).emit(accepted ? "longer-conversation-accepted" : "longer-conversation-denied", {
+              matchId,
+              respondedBy: userId,
+            });
+          });
+        }
+      } catch (error: any) {
+        console.error("Error handling longer conversation response:", error);
+        socket.emit("error", { message: error.message || "Failed to respond to longer conversation request" });
+      }
+    });
+
     // Handle disconnect
     socket.on("disconnect", async () => {
       console.log(`Socket disconnected: ${socket.id}`);
