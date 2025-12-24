@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 const TOPIC_OPTIONS = [
@@ -109,16 +109,34 @@ export default function ProfilePage() {
   const [initialConversationDuration, setInitialConversationDuration] = useState<number>(60);
   const [showName, setShowName] = useState<boolean>(true);
   const [isAcceptingTerms, setIsAcceptingTerms] = useState<boolean>(false);
+  
+  // Track if we've done the initial load and the userId to prevent unnecessary refetches
+  const hasLoadedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
       setLoading(false);
+      hasLoadedRef.current = false;
+      lastUserIdRef.current = null;
+      return;
+    }
+
+    const userId = (session as any)?.userId;
+    
+    // Only fetch if:
+    // 1. We haven't loaded yet, OR
+    // 2. The userId actually changed (user switched accounts)
+    if (hasLoadedRef.current && lastUserIdRef.current === userId) {
       return;
     }
 
     const fetchUser = async () => {
-      setLoading(true);
+      // Only show loading state on initial load, not on refetches
+      if (!hasLoadedRef.current) {
+        setLoading(true);
+      }
       try {
         const res = await fetch("/api/me");
         const data: UserResponse = await res.json();
@@ -131,6 +149,10 @@ export default function ProfilePage() {
           const duration = data.user.initialConversationDuration ?? 60;
           setInitialConversationDuration(Math.max(60, Math.min(300, duration)));
           setShowName(data.user.showName ?? true);
+          
+          // Mark as loaded and track userId
+          hasLoadedRef.current = true;
+          lastUserIdRef.current = userId;
         }
       } catch (err) {
         console.error("Error fetching user:", err);
