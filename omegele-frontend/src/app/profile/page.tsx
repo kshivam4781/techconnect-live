@@ -108,6 +108,7 @@ export default function ProfilePage() {
   const [goals, setGoals] = useState<string>("");
   const [initialConversationDuration, setInitialConversationDuration] = useState<number>(60);
   const [showName, setShowName] = useState<boolean>(true);
+  const [isAcceptingTerms, setIsAcceptingTerms] = useState<boolean>(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -147,6 +148,38 @@ export default function ProfilePage() {
         ? prev.filter((t) => t !== topicLabel)
         : [...prev, topicLabel],
     );
+  };
+
+  const handleAcceptTerms = async () => {
+    if (isAcceptingTerms || !session) return;
+
+    try {
+      setIsAcceptingTerms(true);
+      setError(null);
+
+      const response = await fetch("/api/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ acceptTerms: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to accept terms");
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Error accepting terms:", err);
+      setError(err.message || "Failed to accept terms. Please try again.");
+    } finally {
+      setIsAcceptingTerms(false);
+    }
   };
 
   const handleSave = async () => {
@@ -328,24 +361,126 @@ export default function ProfilePage() {
                 Status:{" "}
                 <span className="font-semibold text-[#bef264]">Verified</span>
               </p>
-              {user?.termsAcceptedAt && (
-                <div className="mt-3 pt-3 border-t border-[#272f45]">
-                  <p className="font-medium text-[#f8f3e8] mb-2">Legal Agreements</p>
-                  <p>
-                    Terms Accepted:{" "}
-                    <span className="font-semibold text-[#bef264]">
-                      {new Date(user.termsAcceptedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </p>
-                  <p className="text-[10px] text-[#9aa2c2] mt-1">
-                    You accepted our Terms & Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy on this date.
-                  </p>
+            </div>
+
+            {/* Terms and Conditions Section */}
+            <div className="mt-4 pt-4 border-t border-[#272f45]">
+              <p className="text-xs font-medium text-[#f8f3e8] mb-3">Legal Agreements</p>
+              {user?.termsAcceptedAt ? (
+                <div className="space-y-2 rounded-xl border border-[#bef264]/30 bg-[#1a2b16]/30 p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-4 w-4 text-[#bef264] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-[#bef264] mb-1">
+                        Terms and Conditions Accepted
+                      </p>
+                      <p className="text-[11px] text-[#c5cbe6] mb-2">
+                        Accepted on:{" "}
+                        <span className="font-semibold text-[#f8f3e8]">
+                          {new Date(user.termsAcceptedAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </span>
+                        {" at "}
+                        <span className="font-semibold text-[#f8f3e8]">
+                          {new Date(user.termsAcceptedAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true
+                          })}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-[#9aa2c2] mb-2">
+                        You have accepted our Terms & Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-[#ffd447] hover:underline"
+                        >
+                          Terms & Conditions
+                        </a>
+                        <span className="text-[#64748b]">•</span>
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-[#ffd447] hover:underline"
+                        >
+                          Privacy Policy
+                        </a>
+                        <span className="text-[#64748b]">•</span>
+                        <a
+                          href="/acceptable-use"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-[#ffd447] hover:underline"
+                        >
+                          Acceptable Use
+                        </a>
+                        <span className="text-[#64748b]">•</span>
+                        <a
+                          href="/cookies"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-[#ffd447] hover:underline"
+                        >
+                          Cookie Policy
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-red-400 mb-1">
+                        Terms and Conditions Not Accepted
+                      </p>
+                      <p className="text-[11px] text-red-300/90 mb-3">
+                        You must accept our Terms and Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy to use this service.
+                      </p>
+                      <div className="space-y-2">
+                        <button
+                          onClick={handleAcceptTerms}
+                          disabled={isAcceptingTerms}
+                          className="w-full inline-flex items-center justify-center rounded-full bg-[#ffd447] px-4 py-2 text-xs font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isAcceptingTerms ? "Accepting..." : "Accept Terms and Conditions"}
+                        </button>
+                        <p className="text-[10px] text-[#9aa2c2] text-center">
+                          By accepting, you agree to our{" "}
+                          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Terms and Conditions
+                          </a>
+                          ,{" "}
+                          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Privacy Policy
+                          </a>
+                          ,{" "}
+                          <a href="/acceptable-use" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Acceptable Use Policy
+                          </a>
+                          , and{" "}
+                          <a href="/cookies" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Cookie Policy
+                          </a>
+                          .
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

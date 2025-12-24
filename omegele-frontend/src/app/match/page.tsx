@@ -61,6 +61,7 @@ export default function MatchPage() {
   const [isExtendedConversation, setIsExtendedConversation] = useState<boolean>(false);
   const [extendedDuration] = useState<number>(30 * 60); // 30 minutes in seconds
   const [showScreenshotWarning, setShowScreenshotWarning] = useState<boolean>(false);
+  const [isAcceptingTerms, setIsAcceptingTerms] = useState<boolean>(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -1462,6 +1463,38 @@ export default function MatchPage() {
     }
   };
 
+  const handleAcceptTerms = async () => {
+    if (isAcceptingTerms) return;
+
+    try {
+      setIsAcceptingTerms(true);
+
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acceptTerms: true }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to accept terms");
+      }
+
+      // Refresh user data to update flagStatus
+      const userRes = await fetch("/api/me");
+      const userData = await userRes.json();
+      
+      if (userData.flagStatus) {
+        setFlagStatus(userData.flagStatus);
+      }
+    } catch (error: any) {
+      console.error("Error accepting terms:", error);
+      alert(error.message || "Failed to accept terms. Please try again.");
+    } finally {
+      setIsAcceptingTerms(false);
+    }
+  };
+
   const handleStartSearch = async () => {
     // Prevent multiple clicks
     if (isStartingSearch) return;
@@ -2011,13 +2044,44 @@ export default function MatchPage() {
                   </svg>
                   <div className="flex-1">
                     <h3 className="text-sm sm:text-base font-semibold text-red-400 mb-1">Account Suspended</h3>
-                    <p className="text-xs sm:text-sm text-red-300/90 mb-2">
+                    <p className="text-xs sm:text-sm text-red-300/90 mb-3">
                       {flagStatus.reason || "Your account has been temporarily suspended. Please contact support for assistance."}
                     </p>
                     {flagStatus.flagCount > 0 && (
-                      <p className="text-xs text-red-300/70">
+                      <p className="text-xs text-red-300/70 mb-3">
                         Flag count: {flagStatus.flagCount}/5
                       </p>
+                    )}
+                    {/* Show Accept Terms button if terms not accepted */}
+                    {!flagStatus.isBlocked && flagStatus.reason?.includes("Terms and Conditions") && (
+                      <div className="mt-3 space-y-2">
+                        <button
+                          onClick={handleAcceptTerms}
+                          disabled={isAcceptingTerms}
+                          className="inline-flex items-center justify-center rounded-full bg-[#ffd447] px-4 py-2 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isAcceptingTerms ? "Accepting..." : "Accept Terms and Conditions"}
+                        </button>
+                        <p className="text-xs text-red-300/70">
+                          By accepting, you agree to our{" "}
+                          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Terms and Conditions
+                          </a>
+                          ,{" "}
+                          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Privacy Policy
+                          </a>
+                          ,{" "}
+                          <a href="/acceptable-use" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Acceptable Use Policy
+                          </a>
+                          , and{" "}
+                          <a href="/cookies" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                            Cookie Policy
+                          </a>
+                          .
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2146,13 +2210,44 @@ export default function MatchPage() {
                 </svg>
                 <div className="flex-1">
                   <h3 className="text-sm sm:text-base font-semibold text-red-400 mb-1">Account Suspended</h3>
-                  <p className="text-xs sm:text-sm text-red-300/90">
+                  <p className="text-xs sm:text-sm text-red-300/90 mb-2">
                     {flagStatus.reason || "Your account has been temporarily suspended. Please contact support for assistance."}
                   </p>
                   {flagStatus.flagCount > 0 && (
-                    <p className="text-xs text-red-300/70 mt-1">
+                    <p className="text-xs text-red-300/70 mb-2">
                       Flag count: {flagStatus.flagCount}/5
                     </p>
+                  )}
+                  {/* Show Accept Terms button if terms not accepted */}
+                  {!flagStatus.isBlocked && flagStatus.reason?.includes("Terms and Conditions") && (
+                    <div className="mt-2 space-y-2">
+                      <button
+                        onClick={handleAcceptTerms}
+                        disabled={isAcceptingTerms}
+                        className="inline-flex items-center justify-center rounded-full bg-[#ffd447] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isAcceptingTerms ? "Accepting..." : "Accept Terms and Conditions"}
+                      </button>
+                      <p className="text-xs text-red-300/70">
+                        By accepting, you agree to our{" "}
+                        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                          Terms and Conditions
+                        </a>
+                        ,{" "}
+                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                          Privacy Policy
+                        </a>
+                        ,{" "}
+                        <a href="/acceptable-use" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                          Acceptable Use Policy
+                        </a>
+                        , and{" "}
+                        <a href="/cookies" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
+                          Cookie Policy
+                        </a>
+                        .
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
