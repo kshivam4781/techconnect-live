@@ -716,12 +716,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* People You May Know - Only show for logged-in users */}
-            {session && !checkingOnboarding && (
-              <div className="mt-6 max-w-xl">
-                <PeopleYouMayKnow />
-              </div>
-            )}
+            {/* People You May Know - Show for both logged-in and non-logged-in users */}
+            <div className="mt-6 max-w-xl">
+              <PeopleYouMayKnow />
+            </div>
           </div>
 
           {/* Matching Scenario Box */}
