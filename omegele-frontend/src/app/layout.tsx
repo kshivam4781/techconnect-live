@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { UserMenu } from "@/components/UserMenu";
 import { LoginButton } from "@/components/LoginButton";
 import { Logo } from "@/components/Logo";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,6 +28,9 @@ export const metadata: Metadata = {
     shortcut: "/icon.png",
     apple: "/icon.png",
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
 };
 
 export default function RootLayout({
@@ -39,6 +43,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <GoogleAnalytics />
         <Providers>
         <div className="flex min-h-screen flex-col bg-gradient-to-b from-white via-gray-200 via-gray-400 via-gray-600 via-gray-800 to-[#050710]">
           <header className="relative z-50 border-b border-gray-200 bg-white/98 backdrop-blur-sm shadow-sm">

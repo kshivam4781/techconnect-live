@@ -357,6 +357,73 @@ export default function Home() {
   ];
   const [currentUseCaseIndex, setCurrentUseCaseIndex] = useState(0);
 
+  // Rotating hero taglines
+  const heroTaglines = [
+    {
+      main: "tech conversations",
+      subtext: "you wish your timeline had.",
+      description: "TechConnect Live pairs you with engineers, founders, students, and builders for spontaneous 1:1 conversations. Less small talk, more real stories, ideas, and unfiltered advice."
+    },
+    {
+      main: "strict privacy",
+      subtext: "your conversations deserve.",
+      description: "Zero data tracking. No ads. No selling your information. Your conversations are private, encrypted, and disappear when you're done. We're serious about privacy."
+    },
+    {
+      main: "study groups",
+      subtext: "that actually help you learn.",
+      description: "Students: Connect with peers studying the same tech stack, get help with coding challenges, or find study partners for your next exam. Real help from real people."
+    },
+    {
+      main: "career conversations",
+      subtext: "that move your career forward.",
+      description: "Working professionals: Network with industry experts, get career advice, discuss tech trends, or find your next opportunity. All in real-time, face-to-face."
+    },
+    {
+      main: "strategic connections",
+      subtext: "CEOs and founders need.",
+      description: "CEOs: Connect with other founders, potential investors, or industry leaders. Discuss strategy, share experiences, and build relationships that matter."
+    },
+    {
+      main: "mentorship",
+      subtext: "that actually makes a difference.",
+      description: "Find mentors who've been where you are. Get real advice from experienced professionals who want to help you grow. No fluff, just genuine guidance."
+    },
+    {
+      main: "tech insights",
+      subtext: "you won't find on social media.",
+      description: "Skip the noise. Have deep conversations about AI, blockchain, cloud architecture, or any tech topic. Real discussions with people who actually know what they're talking about."
+    },
+    {
+      main: "job opportunities",
+      subtext: "before they hit the job boards.",
+      description: "Connect with recruiters, hiring managers, and companies looking for talent. Get referrals, learn about openings, and land your dream job through real conversations."
+    },
+    {
+      main: "co-founder matches",
+      subtext: "that turn ideas into startups.",
+      description: "Founders: Find your technical or business co-founder. Discuss ideas, validate concepts, and build the team that will take your startup to the next level."
+    },
+    {
+      main: "expert advice",
+      subtext: "from people who've built it.",
+      description: "Talk to engineers at FAANG, startup founders, VCs, and industry veterans. Get unfiltered advice from people who've actually built successful products and companies."
+    },
+    {
+      main: "coding help",
+      subtext: "when you're stuck on a problem.",
+      description: "Stuck on a bug? Need code review? Want to discuss architecture? Connect with developers who can help you solve problems in real-time, not through async forums."
+    },
+    {
+      main: "industry trends",
+      subtext: "discussed by the people shaping them.",
+      description: "Stay ahead of the curve. Discuss the latest in AI, web3, cloud computing, or any emerging tech with the people who are actually building and deploying it."
+    }
+  ];
+
+  const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0);
+  const [isTaglineTransitioning, setIsTaglineTransitioning] = useState(false);
+
   // Fetch user statistics
   useEffect(() => {
     const fetchStats = async () => {
@@ -462,6 +529,19 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [matchingScenarios.length]);
 
+  // Rotate through hero taglines
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsTaglineTransitioning(true);
+      setTimeout(() => {
+        setCurrentTaglineIndex((prev) => (prev + 1) % heroTaglines.length);
+        setIsTaglineTransitioning(false);
+      }, 300); // Half of transition duration
+    }, 4000); // Change every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [heroTaglines.length]);
+
   return (
     <div className="min-h-screen bg-white">
       {snowEnabled && (
@@ -520,17 +600,31 @@ export default function Home() {
               <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
               Built for people who actually ship things
             </p>
-            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-              Find the{" "}
-              <span className="underline decoration-[#ffd447] decoration-[6px] underline-offset-8">
-                tech conversations
-              </span>{" "}
-              you wish your timeline had.
+            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl min-h-[180px] sm:min-h-[200px] md:min-h-[220px]">
+              <span className="inline-block">
+                Find the{" "}
+                <span 
+                  className={`underline decoration-[#ffd447] decoration-[6px] underline-offset-8 transition-all duration-500 ${
+                    isTaglineTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+                  }`}
+                >
+                  {heroTaglines[currentTaglineIndex].main}
+                </span>{" "}
+                <span 
+                  className={`transition-all duration-500 ${
+                    isTaglineTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+                  }`}
+                >
+                  {heroTaglines[currentTaglineIndex].subtext}
+                </span>
+              </span>
             </h1>
-            <p className="max-w-xl text-balance text-sm text-[#d3dcec] sm:text-base">
-              TechConnect Live pairs you with engineers, founders, students, and
-              builders for spontaneous 1:1 conversations. Less small talk, more
-              real stories, ideas, and unfiltered advice.
+            <p 
+              className={`max-w-xl text-balance text-sm text-[#d3dcec] sm:text-base min-h-[60px] transition-all duration-500 ${
+                isTaglineTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+              }`}
+            >
+              {heroTaglines[currentTaglineIndex].description}
             </p>
 
             {checkingOnboarding && session ? (
