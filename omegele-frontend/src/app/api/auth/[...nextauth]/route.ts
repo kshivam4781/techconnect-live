@@ -13,6 +13,20 @@ export const authOptions = {
     LinkedIn({
       clientId: process.env.LINKEDIN_CLIENT_ID ?? "",
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
+      authorization: {
+        params: {
+          scope: "openid profile email",
+        },
+      },
+      wellKnown: "https://www.linkedin.com/oauth/.well-known/openid-configuration",
+      profile(profile) {
+        return {
+          id: profile.sub || profile.id,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
+      },
     }),
   ],
   pages: {
@@ -244,16 +258,26 @@ export const authOptions = {
           token.providerAccountId = providerAccountId;
           token.onboarded = user.onboarded;
         } catch (error: any) {
-          console.error("NextAuth JWT callback error:", error);
+          console.error("=== NextAuth JWT callback error ===");
+          console.error("Error:", error);
+          console.error("Error message:", error.message);
+          console.error("Error stack:", error.stack);
           console.error("Error details:", {
             message: error.message,
             code: error.code,
             meta: error.meta,
             provider: account?.provider,
-            profile: profile ? JSON.stringify(profile, null, 2) : "No profile",
+            accountId: account?.id,
+            providerAccountId: account?.providerAccountId,
+            hasProfile: !!profile,
+            profileKeys: profile ? Object.keys(profile) : [],
+            tokenKeys: Object.keys(token),
           });
-          // Don't re-throw - return token with error flag to prevent redirect loop
-          // The error will be caught by NextAuth and shown on error page
+          console.error("Full profile:", profile ? JSON.stringify(profile, null, 2) : "No profile");
+          console.error("Full account:", account ? JSON.stringify(account, null, 2) : "No account");
+          console.error("=== End error details ===");
+          
+          // Re-throw to show error page
           throw new Error(`Authentication failed: ${error.message || "Unknown error"}`);
         }
       }

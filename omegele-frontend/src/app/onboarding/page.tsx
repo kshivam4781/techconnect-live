@@ -269,12 +269,6 @@ export default function OnboardingPage() {
                   <p className="text-xs text-[#9aa2c2]">
                     Pick a few. You can always change this later.
                   </p>
-                  <p className="mt-1 text-[10px] text-[#64748b]">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#ffd447]" />
-                      Trending topics
-                    </span>
-                  </p>
                 </div>
                 <p className="text-[11px] text-[#64748b]">
                   {topics.length > 0
@@ -282,29 +276,60 @@ export default function OnboardingPage() {
                     : "Choose at least 1–2"}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {TOPIC_OPTIONS.map((topic) => {
-                  const active = topics.includes(topic.label);
-                  return (
-                    <button
-                      key={topic.label}
-                      type="button"
-                      onClick={() => toggleTopic(topic.label)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
-                        active
-                          ? "border-[#bef264] bg-[#1a2b16] text-[#e4ffb5]"
-                          : topic.trending
-                          ? "border-[#ffd447] bg-[#18120b] text-[#fef9c3] hover:border-[#facc15]"
-                          : "border-[#3b435a] bg-[#050816] text-[#d3dcec] hover:border-[#6471a3]"
-                      }`}
-                    >
-                      {topic.trending && (
-                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#ffd447]" />
-                      )}
-                      {topic.label}
-                    </button>
-                  );
-                })}
+              
+              {/* Trending Topics Subsection */}
+              <div className="space-y-2 pt-2 border-t border-[#272f45]">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#ffd447]" />
+                  <p className="text-[11px] font-medium text-[#9aa2c2]">
+                    Trending now
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {TOPIC_OPTIONS.filter((topic) => topic.trending).map((topic) => {
+                    const active = topics.includes(topic.label);
+                    return (
+                      <button
+                        key={topic.label}
+                        type="button"
+                        onClick={() => toggleTopic(topic.label)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-[#bef264] bg-[#1a2b16] text-[#e4ffb5]"
+                            : "border-[#ffd447]/40 bg-[#18120b]/50 text-[#fef9c3]/80 hover:border-[#ffd447] hover:bg-[#18120b]"
+                        }`}
+                      >
+                        {topic.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* All Topics */}
+              <div className="space-y-2 pt-2 border-t border-[#272f45]">
+                <p className="text-[11px] font-medium text-[#9aa2c2]">
+                  All topics
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {TOPIC_OPTIONS.filter((topic) => !topic.trending).map((topic) => {
+                    const active = topics.includes(topic.label);
+                    return (
+                      <button
+                        key={topic.label}
+                        type="button"
+                        onClick={() => toggleTopic(topic.label)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-[#bef264] bg-[#1a2b16] text-[#e4ffb5]"
+                            : "border-[#3b435a] bg-[#050816] text-[#d3dcec] hover:border-[#6471a3]"
+                        }`}
+                      >
+                        {topic.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </section>
 
