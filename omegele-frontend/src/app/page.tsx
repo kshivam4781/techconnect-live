@@ -715,11 +715,6 @@ export default function Home() {
                 </p>
               </div>
             </div>
-
-            {/* People You May Know - Show for both logged-in and non-logged-in users */}
-            <div className="mt-6 max-w-xl">
-              <PeopleYouMayKnow />
-            </div>
           </div>
 
           {/* Matching Scenario Box */}
@@ -856,6 +851,35 @@ export default function Home() {
                 You&apos;re paired with another tech person for a focused
                 conversation. Skip, block, or report anytime.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* People You May Know Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-20">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(190,242,100,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,212,71,0.1),transparent_50%)]" />
+        </div>
+        <div className="relative mx-auto max-w-5xl">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#3b435a] bg-[#131827] px-4 py-2 text-sm font-medium text-[#d3dcec] shadow-sm backdrop-blur mb-4">
+              <svg className="h-4 w-4 text-[#bef264]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>Network & Connect</span>
+            </div>
+            <h2 className="text-4xl font-bold tracking-tight text-[#f8f3e8] sm:text-5xl mb-4">
+              People you may know
+            </h2>
+            <p className="max-w-2xl mx-auto text-lg text-[#d3dcec]">
+              Connect with professionals from your network, company, or shared interests
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="w-full max-w-2xl">
+              <PeopleYouMayKnow />
             </div>
           </div>
         </div>

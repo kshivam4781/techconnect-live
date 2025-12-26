@@ -14,6 +14,31 @@ const handle = app.getRequestHandler();
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
     try {
+      // Ensure HTTPS in production (handle redirects before Next.js)
+      if (
+        process.env.NODE_ENV === "production" &&
+        req.headers["x-forwarded-proto"] !== "https" &&
+        !req.url?.includes("localhost")
+      ) {
+        const host = req.headers.host || "";
+        res.writeHead(301, {
+          Location: `https://${host}${req.url}`,
+        });
+        res.end();
+        return;
+      }
+
+      // Add security headers
+      res.setHeader("X-DNS-Prefetch-Control", "on");
+      res.setHeader(
+        "Strict-Transport-Security",
+        "max-age=63072000; includeSubDomains; preload"
+      );
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-XSS-Protection", "1; mode=block");
+      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
       const parsedUrl = parse(req.url!, true);
       await handle(req, res, parsedUrl);
     } catch (err) {
