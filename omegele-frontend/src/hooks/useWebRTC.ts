@@ -44,43 +44,80 @@ export function useWebRTC({
 
     const initMedia = async () => {
       try {
-        // Check if we already have a stream from the video element
+        // Check if we already have a valid stream
         let stream = localStreamRef.current;
         
+        // Check if stream from ref is still valid (has active tracks)
+        if (stream) {
+          const activeTracks = stream.getTracks().filter(track => track.readyState === 'live');
+          if (activeTracks.length === 0) {
+            // Stream is no longer valid, clear it
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            localStreamRef.current = null;
+          }
+        }
+        
+        // Check video element for existing stream
         if (!stream && localVideoRef.current?.srcObject) {
-          stream = localVideoRef.current.srcObject as MediaStream;
-          localStreamRef.current = stream;
-          // Ensure all tracks are enabled
-          stream.getTracks().forEach((track) => {
-            if (!track.enabled) {
-              track.enabled = true;
-            }
-          });
+          const elementStream = localVideoRef.current.srcObject as MediaStream;
+          const activeTracks = elementStream.getTracks().filter(track => track.readyState === 'live');
+          if (activeTracks.length > 0) {
+            stream = elementStream;
+            localStreamRef.current = stream;
+            // Ensure all tracks are enabled
+            stream.getTracks().forEach((track) => {
+              if (!track.enabled) {
+                track.enabled = true;
+              }
+            });
+          }
         }
 
-        // If still no stream, request new one
+        // If still no valid stream, request new one
         if (!stream) {
+          console.log("Requesting new media stream, audioOnly:", audioOnly);
           stream = await navigator.mediaDevices.getUserMedia({
             video: !audioOnly,
             audio: true,
           });
           localStreamRef.current = stream;
+          console.log("Got media stream with tracks:", stream.getTracks().map(t => `${t.kind}:${t.label}`).join(", "));
+        }
 
-          if (localVideoRef.current) {
+        // Always ensure stream is attached to video element and playing
+        if (stream && localVideoRef.current) {
+          // Only update if different to avoid unnecessary re-renders
+          if (localVideoRef.current.srcObject !== stream) {
             localVideoRef.current.srcObject = stream;
-            // Ensure video plays
-            localVideoRef.current.play().catch((err) => {
-              console.error("Error playing local video:", err);
-            });
+            console.log("Set local stream to video element");
           }
-        } else {
-          // Ensure stream is still attached to video element
-          if (localVideoRef.current && localVideoRef.current.srcObject !== stream) {
-            localVideoRef.current.srcObject = stream;
-            localVideoRef.current.play().catch((err) => {
+          
+          // Ensure video plays - use multiple attempts if needed
+          const playVideo = async () => {
+            try {
+              if (localVideoRef.current && localVideoRef.current.srcObject === stream) {
+                await localVideoRef.current.play();
+                console.log("Local video playing successfully");
+              }
+            } catch (err) {
               console.error("Error playing local video:", err);
-            });
-          }
+              // Retry after a short delay
+              setTimeout(() => {
+                if (localVideoRef.current && localVideoRef.current.srcObject === stream) {
+                  localVideoRef.current.play().catch((retryErr) => {
+                    console.error("Error playing local video on retry:", retryErr);
+                  });
+                }
+              }, 100);
+            }
+          };
+          
+          // Play immediately
+          playVideo();
+          
+          // Also try after a small delay to handle any timing issues
+          setTimeout(playVideo, 100);
         }
 
         // Only create peer connection when we have a matchId
@@ -114,67 +151,101 @@ export function useWebRTC({
           // Handle remote stream (set handlers only once when creating new connection)
           if (!handlersAttachedRef.current) {
             pc.ontrack = (event) => {
-              console.log("Received remote track:", event, "streams:", event.streams.length);
+              console.log("Received remote track:", event.track.kind, event.track.label, "streams:", event.streams.length);
               
               // Get or create remote stream
               let remoteStream = remoteStreamRef.current;
               
-              if (!remoteStream || !event.streams[0]) {
-                // Create new stream or use the one from event
-                remoteStream = event.streams[0] || new MediaStream();
+              // Use the stream from the event if available, otherwise create new or use existing
+              if (event.streams && event.streams.length > 0 && event.streams[0]) {
+                remoteStream = event.streams[0];
                 remoteStreamRef.current = remoteStream;
+                console.log("Using remote stream from event, tracks:", remoteStream.getTracks().length);
+              } else if (!remoteStream) {
+                remoteStream = new MediaStream();
+                remoteStreamRef.current = remoteStream;
+                console.log("Created new remote stream");
               }
               
               // Add track to stream if not already present
               const track = event.track;
-              if (track && !remoteStream.getTracks().includes(track)) {
-                remoteStream.addTrack(track);
-                console.log("Added track to remote stream:", track.kind, track.label);
+              if (track) {
+                const existingTrack = remoteStream.getTracks().find(t => t.id === track.id);
+                if (!existingTrack) {
+                  remoteStream.addTrack(track);
+                  console.log("Added track to remote stream:", track.kind, track.label, "total tracks:", remoteStream.getTracks().length);
+                } else {
+                  console.log("Track already in remote stream:", track.kind, track.label);
+                }
               }
               
-              // Try to set stream to video element if available
-              // If not available, it will be set when the element is rendered (handled by useEffect below)
-              if (remoteVideoRef.current) {
-                console.log("Setting remote stream to video element, tracks:", remoteStream.getTracks().length);
-                
-                // Ensure all tracks are enabled before setting
-                remoteStream.getTracks().forEach((track) => {
-                  if (!track.enabled) {
-                    track.enabled = true;
-                    console.log("Enabled remote track before setting to element:", track.kind, track.label);
+              // Set stream to video element immediately if available
+              const setRemoteStreamToElement = () => {
+                if (remoteVideoRef.current && remoteStreamRef.current) {
+                  const stream = remoteStreamRef.current;
+                  console.log("Setting remote stream to video element, tracks:", stream.getTracks().length);
+                  
+                  // Ensure all tracks are enabled before setting
+                  stream.getTracks().forEach((track) => {
+                    if (!track.enabled) {
+                      track.enabled = true;
+                      console.log("Enabled remote track:", track.kind, track.label);
+                    }
+                  });
+                  
+                  // Only update if different to avoid unnecessary re-renders
+                  if (remoteVideoRef.current.srcObject !== stream) {
+                    remoteVideoRef.current.srcObject = stream;
+                    console.log("Remote stream attached to video element");
                   }
-                });
-                
-                remoteVideoRef.current.srcObject = remoteStream;
-                
-                // Ensure audio is enabled and not muted
-                remoteVideoRef.current.muted = false;
-                if (remoteVideoRef.current.volume !== undefined) {
-                  remoteVideoRef.current.volume = 1.0;
-                }
-                
-                // Log all tracks
-                remoteStream.getAudioTracks().forEach((track) => {
-                  console.log("Remote audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
-                });
-                remoteStream.getVideoTracks().forEach((track) => {
-                  console.log("Remote video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
-                });
-                
-                // Force play to ensure video and audio work
-                // Use a small delay to ensure the stream is fully attached
-                setTimeout(() => {
-                  if (remoteVideoRef.current && remoteVideoRef.current.srcObject === remoteStream) {
-                    remoteVideoRef.current.play().then(() => {
-                      console.log("Remote video playing successfully");
-                    }).catch((err) => {
+                  
+                  // Ensure audio is enabled and not muted
+                  remoteVideoRef.current.muted = false;
+                  if (remoteVideoRef.current.volume !== undefined) {
+                    remoteVideoRef.current.volume = 1.0;
+                  }
+                  
+                  // Log all tracks for debugging
+                  stream.getAudioTracks().forEach((track) => {
+                    console.log("Remote audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                  });
+                  stream.getVideoTracks().forEach((track) => {
+                    console.log("Remote video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                  });
+                  
+                  // Force play to ensure video and audio work
+                  const playRemoteVideo = async () => {
+                    try {
+                      if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream) {
+                        await remoteVideoRef.current.play();
+                        console.log("Remote video playing successfully");
+                      }
+                    } catch (err) {
                       console.error("Error playing remote video:", err);
-                    });
-                  }
-                }, 100);
-              } else {
-                console.log("remoteVideoRef.current is null, stream stored in ref. Will be set when element is available.");
-              }
+                      // Retry after a short delay
+                      setTimeout(() => {
+                        if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream) {
+                          remoteVideoRef.current.play().catch((retryErr) => {
+                            console.error("Error playing remote video on retry:", retryErr);
+                          });
+                        }
+                      }, 200);
+                    }
+                  };
+                  
+                  // Play immediately and after a delay
+                  playRemoteVideo();
+                  setTimeout(playRemoteVideo, 100);
+                } else {
+                  console.log("Remote video element not available yet, stream stored in ref. Tracks:", remoteStreamRef.current?.getTracks().length || 0);
+                }
+              };
+              
+              // Try to set immediately
+              setRemoteStreamToElement();
+              
+              // Also try after a small delay in case element isn't ready
+              setTimeout(setRemoteStreamToElement, 100);
             };
 
             // Handle ICE candidates
@@ -322,6 +393,35 @@ export function useWebRTC({
     };
   }, [socket, matchId]);
 
+  // Ensure local video element is properly set up when it becomes available
+  useEffect(() => {
+    if (!enabled) return;
+    
+    const checkLocalVideo = () => {
+      if (localVideoRef.current && localStreamRef.current) {
+        const stream = localStreamRef.current;
+        // Ensure stream is attached
+        if (localVideoRef.current.srcObject !== stream) {
+          localVideoRef.current.srcObject = stream;
+          console.log("Restored local stream to video element");
+        }
+        
+        // Ensure video is playing
+        if (localVideoRef.current.paused) {
+          localVideoRef.current.play().catch((err) => {
+            console.error("Error playing local video in check:", err);
+          });
+        }
+      }
+    };
+    
+    // Check immediately and periodically
+    checkLocalVideo();
+    const interval = setInterval(checkLocalVideo, 500);
+    
+    return () => clearInterval(interval);
+  }, [enabled]);
+
   // Ensure remote video is properly set up and playing
   // This effect runs when the video element becomes available or when matchId/enabled changes
   useEffect(() => {
@@ -331,17 +431,18 @@ export function useWebRTC({
       if (remoteVideoRef.current) {
         // Use remoteStreamRef if video element doesn't have a stream
         if (!remoteVideoRef.current.srcObject && remoteStreamRef.current) {
-          console.log("Restoring remote stream to video element, tracks:", remoteStreamRef.current.getTracks().length);
+          const stream = remoteStreamRef.current;
+          console.log("Restoring remote stream to video element, tracks:", stream.getTracks().length);
           
           // Ensure all tracks are enabled before setting
-          remoteStreamRef.current.getTracks().forEach((track) => {
+          stream.getTracks().forEach((track) => {
             if (!track.enabled) {
               track.enabled = true;
               console.log("Enabled remote track before restoration:", track.kind, track.label);
             }
           });
           
-          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          remoteVideoRef.current.srcObject = stream;
         }
         
         const stream = remoteVideoRef.current.srcObject as MediaStream;
