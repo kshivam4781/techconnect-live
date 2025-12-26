@@ -1,37 +1,49 @@
 export default function AcceptableUsePage() {
   return (
-    <div className="min-h-screen bg-[#050710] text-[#f8f3e8]">
-      <main className="mx-auto max-w-4xl px-4 py-16">
-        <section className="space-y-6">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9aa2c2]">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-20">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(190,242,100,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,212,71,0.1),transparent_50%)]" />
+        </div>
+        <div className="relative mx-auto max-w-4xl text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[#3b435a] bg-[#131827] px-4 py-2 text-sm font-medium text-[#d3dcec] shadow-sm backdrop-blur mb-6">
+            <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
             Platform Rules
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-4xl font-bold tracking-tight text-[#f8f3e8] sm:text-5xl md:text-6xl mb-6">
             Acceptable Use Policy
           </h1>
-          <p className="max-w-2xl text-sm text-[#d3dcec] sm:text-base">
+          <p className="max-w-2xl mx-auto text-base text-[#d3dcec]">
             Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
-        </section>
+        </div>
+      </section>
 
-        <section className="mt-10 space-y-6 text-sm text-[#d3dcec] sm:text-base">
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+      {/* Main Content */}
+      <main className="mx-auto max-w-4xl px-4 py-16">
+        <section className="space-y-8">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Purpose
             </h2>
-            <p>
-              This Acceptable Use Policy outlines the rules and guidelines for using our platform. By using this service, you agree to comply with this policy. Violations may result in suspension or termination of your account.
+            <p className="text-base text-slate-700 leading-relaxed">
+              This Acceptable Use Policy outlines the rules and guidelines for using our platform. 
+              By using this service, you agree to comply with this policy. Violations may result 
+              in suspension or termination of your account.
             </p>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Professional Conduct
             </h2>
-            <p>
-              This platform is designed for professional networking and meaningful conversations. You agree to:
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
+              This platform is designed for professional networking and meaningful conversations. 
+              You agree to:
             </p>
-            <ul className="ml-6 list-disc space-y-2">
+            <ul className="ml-6 list-disc space-y-2 text-base text-slate-700">
               <li>Maintain a professional and respectful demeanor at all times</li>
               <li>Use the platform for its intended purpose of professional networking</li>
               <li>Respect other users&apos; time, boundaries, and privacy</li>
@@ -40,18 +52,18 @@ export default function AcceptableUsePage() {
             </ul>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#ffd44733] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#ffd447]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Prohibited Activities
             </h2>
-            <p className="font-medium text-[#f8f3e8] mb-3">
+            <p className="text-base text-slate-700 font-medium mb-4">
               The following activities are strictly prohibited and may result in immediate account termination:
             </p>
             
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Harassment and Abuse</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Harassment and Abuse</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Harassing, bullying, threatening, or intimidating other users</li>
                   <li>Using hate speech, slurs, or discriminatory language</li>
                   <li>Stalking or repeatedly contacting users who have indicated they do not want to interact</li>
@@ -60,8 +72,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Inappropriate Content</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Inappropriate Content</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Sharing sexual, explicit, or pornographic content</li>
                   <li>Displaying nudity or engaging in sexual behavior</li>
                   <li>Sharing graphic, violent, or disturbing content</li>
@@ -70,8 +82,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Spam and Solicitation</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Spam and Solicitation</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Sending unsolicited commercial messages or advertisements</li>
                   <li>Aggressively recruiting or selling products/services</li>
                   <li>Sharing referral links, affiliate links, or promotional codes without permission</li>
@@ -80,8 +92,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Fraud and Scams</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Fraud and Scams</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Engaging in fraudulent activities or scams</li>
                   <li>Impersonating other individuals, companies, or organizations</li>
                   <li>Phishing or attempting to steal personal information</li>
@@ -91,8 +103,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Privacy Violations</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Privacy Violations</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Recording, screenshotting, or capturing video/audio without explicit consent</li>
                   <li>Sharing another user&apos;s personal information without permission</li>
                   <li>Doxxing or revealing private information about other users</li>
@@ -101,8 +113,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Technical Abuse</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Technical Abuse</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Attempting to hack, exploit, or compromise the platform</li>
                   <li>Using automated tools, bots, or scripts to interact with the service</li>
                   <li>Circumventing security measures or access controls</li>
@@ -112,8 +124,8 @@ export default function AcceptableUsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-[#f8f3e8] mb-2">Illegal Activities</h3>
-                <ul className="ml-6 list-disc space-y-1 text-sm">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Illegal Activities</h3>
+                <ul className="ml-6 list-disc space-y-1 text-base text-slate-700">
                   <li>Engaging in any illegal activities or encouraging others to do so</li>
                   <li>Sharing content that violates intellectual property rights</li>
                   <li>Distributing malware, viruses, or harmful software</li>
@@ -123,14 +135,14 @@ export default function AcceptableUsePage() {
             </div>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Account Responsibilities
             </h2>
-            <p>
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
               You are responsible for:
             </p>
-            <ul className="ml-6 list-disc space-y-2">
+            <ul className="ml-6 list-disc space-y-2 text-base text-slate-700">
               <li>Maintaining the security of your account credentials</li>
               <li>All activities that occur under your account</li>
               <li>Ensuring your account information is accurate and up-to-date</li>
@@ -139,17 +151,19 @@ export default function AcceptableUsePage() {
             </ul>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Reporting Violations
             </h2>
-            <p>
-              If you encounter any violations of this policy, please report them immediately using the platform&apos;s reporting features. We take all reports seriously and will investigate promptly.
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
+              If you encounter any violations of this policy, please report them immediately using 
+              the platform&apos;s reporting features. We take all reports seriously and will investigate 
+              promptly.
             </p>
-            <p>
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
               When reporting, please provide:
             </p>
-            <ul className="ml-6 list-disc space-y-2">
+            <ul className="ml-6 list-disc space-y-2 text-base text-slate-700">
               <li>Details of the violation</li>
               <li>User ID or identifying information (if available)</li>
               <li>Timestamp and relevant context</li>
@@ -157,48 +171,50 @@ export default function AcceptableUsePage() {
             </ul>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Enforcement
             </h2>
-            <p>
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
               Violations of this policy may result in:
             </p>
-            <ul className="ml-6 list-disc space-y-2">
-              <li><strong className="text-[#ffd447]">Warnings:</strong> For minor or first-time violations</li>
-              <li><strong className="text-[#ffd447]">Temporary Suspension:</strong> For repeated violations or moderate offenses</li>
-              <li><strong className="text-[#ffd447]">Permanent Ban:</strong> For severe violations, repeat offenses, or illegal activities</li>
-              <li><strong className="text-[#ffd447]">Legal Action:</strong> For serious violations, we may report to law enforcement</li>
+            <ul className="ml-6 list-disc space-y-2 text-base text-slate-700">
+              <li><strong>Warnings:</strong> For minor or first-time violations</li>
+              <li><strong>Temporary Suspension:</strong> For repeated violations or moderate offenses</li>
+              <li><strong>Permanent Ban:</strong> For severe violations, repeat offenses, or illegal activities</li>
+              <li><strong>Legal Action:</strong> For serious violations, we may report to law enforcement</li>
             </ul>
-            <p className="mt-4">
-              We reserve the right to take any action we deem appropriate, including immediate account termination without prior notice for severe violations.
+            <p className="text-base text-slate-700 leading-relaxed mt-4">
+              We reserve the right to take any action we deem appropriate, including immediate account 
+              termination without prior notice for severe violations.
             </p>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               No Liability
             </h2>
-            <p>
-              We are not responsible for the content, conduct, or actions of users on this platform. You use this service at your own risk and are solely responsible for your interactions with other users.
+            <p className="text-base text-slate-700 leading-relaxed mb-3">
+              We are not responsible for the content, conduct, or actions of users on this platform. 
+              You use this service at your own risk and are solely responsible for your interactions 
+              with other users.
             </p>
-            <p>
-              We do not monitor all content in real-time and rely on user reports and automated systems to identify violations. We cannot guarantee that all violations will be detected or prevented.
+            <p className="text-base text-slate-700 leading-relaxed">
+              We do not monitor all content in real-time and rely on user reports and automated 
+              systems to identify violations. We cannot guarantee that all violations will be 
+              detected or prevented.
             </p>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0c111c] p-6">
-            <h2 className="text-lg font-semibold text-[#f8f3e8]">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-4">
               Changes to This Policy
             </h2>
-            <p>
-              We may update this Acceptable Use Policy from time to time. We will notify users of significant changes by posting the updated policy on this page and updating the &quot;Last updated&quot; date. Your continued use of the service after changes constitutes acceptance of the updated policy.
-            </p>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-[#ffd44733] bg-[#0c111c] p-6 text-xs text-[#9aa2c2]">
-            <p className="font-medium text-[#ffd447]">
-              Important: Violations of this policy may result in immediate account termination and, in severe cases, legal action. Use this platform responsibly and professionally.
+            <p className="text-base text-slate-700 leading-relaxed">
+              We may update this Acceptable Use Policy from time to time. We will notify users of 
+              significant changes by posting the updated policy on this page and updating the 
+              &quot;Last updated&quot; date. Your continued use of the service after changes constitutes 
+              acceptance of the updated policy.
             </p>
           </div>
         </section>
@@ -206,4 +222,3 @@ export default function AcceptableUsePage() {
     </div>
   );
 }
-
