@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
+import LinkedIn from "next-auth/providers/linkedin";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions = {
@@ -9,22 +10,56 @@ export const authOptions = {
       clientId: process.env.GITHUB_CLIENT_ID ?? "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
     }),
+    LinkedIn({
+      clientId: process.env.LINKEDIN_CLIENT_ID ?? "",
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
+      authorization: {
+        params: {
+          scope: "openid profile email",
+        },
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, account, profile }: any) {
       // On initial sign-in, upsert the user and their provider account
       if (account && profile) {
         try {
-          const email = (profile.email || token.email) as string | undefined;
-          const name =
-            (profile.name as string | undefined) ||
-            (profile.login as string | undefined) ||
-            (token.name as string | undefined) ||
-            null;
-          const image =
-            (profile.avatar_url as string | undefined) ||
-            (token.picture as string | undefined) ||
-            null;
+          // Handle different profile structures for different providers
+          let email: string | undefined;
+          let name: string | null = null;
+          let image: string | null = null;
+
+          if (account.provider === "github") {
+            // GitHub profile structure
+            email = (profile.email || token.email) as string | undefined;
+            name =
+              (profile.name as string | undefined) ||
+              (profile.login as string | undefined) ||
+              (token.name as string | undefined) ||
+              null;
+            image =
+              (profile.avatar_url as string | undefined) ||
+              (token.picture as string | undefined) ||
+              null;
+          } else if (account.provider === "linkedin") {
+            // LinkedIn profile structure
+            email = (profile.email as string | undefined) || token.email;
+            const firstName = (profile.localizedFirstName as string | undefined) || "";
+            const lastName = (profile.localizedLastName as string | undefined) || "";
+            name = firstName && lastName 
+              ? `${firstName} ${lastName}`.trim()
+              : (profile.name as string | undefined) || token.name || null;
+            image =
+              (profile.profilePicture?.displayImage as string | undefined) ||
+              (token.picture as string | undefined) ||
+              null;
+          } else {
+            // Fallback for other providers
+            email = (profile.email || token.email) as string | undefined;
+            name = (profile.name as string | undefined) || token.name || null;
+            image = (profile.picture || token.picture) as string | undefined || null;
+          }
 
           // Get the provider account ID correctly
           const providerAccountId = account.providerAccountId || String(account.id);

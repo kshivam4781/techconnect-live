@@ -191,6 +191,15 @@ export default function MatchPage() {
       setLoadingConfig(true);
       try {
         const res = await fetch("/api/me");
+        if (!res.ok) {
+          console.error("Failed to fetch user config:", res.status, res.statusText);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          return;
+        }
         const data = await res.json();
         if (data.user) {
           if (!data.user.onboarded) {
@@ -682,6 +691,11 @@ export default function MatchPage() {
         throw new Error('Failed to fetch address');
       }
       
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error('Invalid response format from location service');
+      }
+      
       const data = await response.json();
       
       if (data.address) {
@@ -942,6 +956,15 @@ export default function MatchPage() {
     const fetchActiveUsers = async () => {
       try {
         const res = await fetch("/api/activity/stats");
+        if (!res.ok) {
+          console.error("Failed to fetch active users:", res.status, res.statusText);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          return;
+        }
         const data = await res.json();
         if (data.totalActive !== undefined) {
           setActiveUsersCount(data.totalActive);
@@ -1476,12 +1499,25 @@ export default function MatchPage() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const contentType = res.headers.get("content-type");
+        let error: any = {};
+        if (contentType && contentType.includes("application/json")) {
+          error = await res.json().catch(() => ({}));
+        }
         throw new Error(error.error || "Failed to accept terms");
       }
 
       // Refresh user data to update flagStatus
       const userRes = await fetch("/api/me");
+      if (!userRes.ok) {
+        console.error("Failed to refresh user data:", userRes.status, userRes.statusText);
+        return;
+      }
+      const contentType = userRes.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Response is not JSON:", contentType);
+        return;
+      }
       const userData = await userRes.json();
       
       if (userData.flagStatus) {
@@ -1553,6 +1589,10 @@ export default function MatchPage() {
         throw new Error(errorData.error || "Failed to start session");
       }
 
+      const contentType = sessionRes.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response format from server");
+      }
       const sessionData = await sessionRes.json();
       setCurrentSessionId(sessionData.sessionId);
 

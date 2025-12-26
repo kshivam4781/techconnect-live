@@ -3,22 +3,249 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession, signOut } from "next-auth/react";
+import Snowfall from "react-snowfall";
+
+// Safety Feature Card Component
+function SafetyFeatureCard({
+  title,
+  subtitle,
+  description,
+}: {
+  title: string;
+  subtitle: string;
+  description: string;
+}) {
+  return (
+    <div className="relative group">
+      <div className="relative rounded-xl border border-slate-200 bg-white p-6 min-w-[200px] max-w-[260px] shadow-sm transition-all hover:shadow-md hover:border-slate-300">
+        <div className="mb-3">
+          <p className="text-base font-semibold text-slate-900">{title}</p>
+          <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [snowEnabled, setSnowEnabled] = useState(true);
   const [stats, setStats] = useState<{
     totalRegisteredUsers: number;
     totalActive: number;
     totalOnline: number;
   } | null>(null);
+  
+  // Matching scenarios for hero section
+  const matchingScenarios = [
+    {
+      scenario: "your next co-developer",
+      you: {
+        initial: "Y",
+        role: "Full Stack Developer",
+        quote: "Looking for a coding partner for my side project."
+      },
+      match: {
+        initial: "D",
+        role: "Senior Developer · React",
+        quote: "Interested in collaborating on innovative projects.",
+        verified: "Verified via GitHub"
+      }
+    },
+    {
+      scenario: "your VC",
+      you: {
+        initial: "Y",
+        role: "Founder · Pre-seed",
+        quote: "Building the next big thing, need funding."
+      },
+      match: {
+        initial: "V",
+        role: "VC Partner · Early Stage",
+        quote: "Investing in innovative tech startups.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      scenario: "your co-founder",
+      you: {
+        initial: "Y",
+        role: "Technical Founder",
+        quote: "Need a business co-founder for my startup."
+      },
+      match: {
+        initial: "B",
+        role: "Business Founder · Sales",
+        quote: "Looking for a technical co-founder to build with.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      scenario: "your next employer",
+      you: {
+        initial: "Y",
+        role: "Senior Backend Eng",
+        quote: "Looking for my next challenge at a growing startup."
+      },
+      match: {
+        initial: "R",
+        role: "Tech Recruiter · SF",
+        quote: "We're hiring senior engineers for our AI team.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      scenario: "your next big break",
+      you: {
+        initial: "Y",
+        role: "Indie Developer",
+        quote: "Ready to take my project to the next level."
+      },
+      match: {
+        initial: "O",
+        role: "Product Manager · Tech",
+        quote: "Always looking for talented builders to connect with.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+  ];
+
+  const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
+
+  // Rotating use cases with matching profiles
+  const useCaseData = [
+    {
+      useCase: "your next employer",
+      you: {
+        initial: "Y",
+        role: "Senior Backend Eng",
+        quote: "Looking for my next challenge at a growing startup."
+      },
+      match: {
+        initial: "R",
+        role: "Tech Recruiter · SF",
+        quote: "We're hiring senior engineers for our AI team.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your next mentor",
+      you: {
+        initial: "Y",
+        role: "Mid-level Developer",
+        quote: "Want to level up my skills and career trajectory."
+      },
+      match: {
+        initial: "M",
+        role: "Staff Engineer · 10+ YOE",
+        quote: "Happy to share career advice and technical insights.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your venture capital",
+      you: {
+        initial: "Y",
+        role: "Founder · Pre-seed",
+        quote: "Building the next big thing, need funding."
+      },
+      match: {
+        initial: "V",
+        role: "VC Partner · Early Stage",
+        quote: "Investing in innovative tech startups.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your next customer",
+      you: {
+        initial: "Y",
+        role: "SaaS Founder",
+        quote: "Looking to connect with potential enterprise clients."
+      },
+      match: {
+        initial: "C",
+        role: "CTO · Enterprise",
+        quote: "Always exploring new tools for our tech stack.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your co-founder",
+      you: {
+        initial: "Y",
+        role: "Technical Founder",
+        quote: "Need a business co-founder for my startup."
+      },
+      match: {
+        initial: "B",
+        role: "Business Founder · Sales",
+        quote: "Looking for a technical co-founder to build with.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your next investor",
+      you: {
+        initial: "Y",
+        role: "Startup Founder",
+        quote: "Seeking seed funding for our platform."
+      },
+      match: {
+        initial: "I",
+        role: "Angel Investor · Tech",
+        quote: "Investing in early-stage B2B SaaS companies.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+    {
+      useCase: "your next collaborator",
+      you: {
+        initial: "Y",
+        role: "Open Source Maintainer",
+        quote: "Looking for contributors for my project."
+      },
+      match: {
+        initial: "D",
+        role: "Developer · Open Source",
+        quote: "Interested in contributing to meaningful projects.",
+        verified: "Verified via GitHub"
+      }
+    },
+    {
+      useCase: "your next advisor",
+      you: {
+        initial: "Y",
+        role: "First-time Founder",
+        quote: "Need guidance on product-market fit."
+      },
+      match: {
+        initial: "A",
+        role: "Serial Entrepreneur · Advisor",
+        quote: "Helping founders navigate early-stage challenges.",
+        verified: "Verified via LinkedIn"
+      }
+    },
+  ];
+  const [currentUseCaseIndex, setCurrentUseCaseIndex] = useState(0);
 
   // Fetch user statistics
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await fetch("/api/activity/stats");
+        if (!res.ok) {
+          console.error("Failed to fetch stats:", res.status, res.statusText);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          return;
+        }
         const data = await res.json();
         if (data.totalRegisteredUsers !== undefined) {
           setStats({
@@ -49,46 +276,117 @@ export default function Home() {
 
     // Check onboarded status from session first (faster)
     const sessionOnboarded = (session as any)?.onboarded;
-    if (sessionOnboarded === false) {
-      router.push("/onboarding");
+    
+    // If explicitly true, user is onboarded
+    if (sessionOnboarded === true) {
+      setCheckingOnboarding(false);
       return;
     }
 
-    // If not in session, fetch from API
-    if (sessionOnboarded === undefined) {
-      const checkOnboarding = async () => {
-        try {
-          const res = await fetch("/api/me");
-          const data = await res.json();
-          if (data.user && !data.user.onboarded) {
+    // If false or undefined, check from API to be sure
+    const checkOnboarding = async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) {
+          console.error("Failed to fetch user:", res.status, res.statusText);
+          setCheckingOnboarding(false);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          setCheckingOnboarding(false);
+          return;
+        }
+        const data = await res.json();
+        if (data.user) {
+          if (!data.user.onboarded) {
             router.push("/onboarding");
             return;
           }
-        } catch (error) {
-          console.error("Error checking onboarding:", error);
-        } finally {
+          // User is onboarded, set checking to false
+          setCheckingOnboarding(false);
+        } else {
+          // No user data, might need to sign in
           setCheckingOnboarding(false);
         }
-      };
-      checkOnboarding();
-    } else {
-      setCheckingOnboarding(false);
-    }
+      } catch (error) {
+        console.error("Error checking onboarding:", error);
+        setCheckingOnboarding(false);
+      }
+    };
+    
+    checkOnboarding();
   }, [session, status, router]);
 
+  // Rotate through use cases
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentUseCaseIndex((prev) => (prev + 1) % useCaseData.length);
+    }, 3000); // Change every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [useCaseData.length]);
+
+  // Rotate through matching scenarios
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentScenarioIndex((prev) => (prev + 1) % matchingScenarios.length);
+    }, 5000); // Change every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [matchingScenarios.length]);
+
   return (
-    <div className="min-h-screen bg-[#0b1018] text-[#f8f3e8]">
-      <section className="relative overflow-hidden border-b border-[#272f45]">
+    <div className="min-h-screen bg-white">
+      {snowEnabled && (
+        <Snowfall
+          style={{
+            position: 'fixed',
+            width: '100%',
+            height: '100%',
+            zIndex: 1000,
+            pointerEvents: 'none',
+          }}
+          snowflakeCount={100}
+          speed={[0.5, 3]}
+          wind={[-0.5, 0.5]}
+          radius={[0.5, 3]}
+          color="#ffffff"
+        />
+      )}
+      <button
+        onClick={() => setSnowEnabled(!snowEnabled)}
+        className="fixed top-4 right-4 z-[1001] flex items-center gap-2 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-lg transition-all hover:bg-white hover:shadow-xl"
+        aria-label={snowEnabled ? "Stop snow" : "Start snow"}
+      >
+        {snowEnabled ? (
+          <>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Stop Snow
+          </>
+        ) : (
+          <>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Start Snow
+          </>
+        )}
+      </button>
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="absolute inset-0">
           <video
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover opacity-40"
             src="/hero.mp4"
             autoPlay
             muted
             loop
             playsInline
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#d4d4d433] via-[#02061799] to-[#020617ee] backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/95 via-slate-800/90 to-slate-900/95" />
         </div>
 
         <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col items-center gap-10 px-4 py-16 text-center sm:flex-row sm:items-stretch sm:gap-16 sm:text-left">
@@ -157,12 +455,18 @@ export default function Home() {
               <>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <button
+                    onClick={() => signIn("linkedin")}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-[#0077b5] px-5 text-sm font-semibold text-white shadow-[0_0_26px_rgba(0,119,181,0.45)] transition hover:-translate-y-0.5 hover:bg-[#006399] hover:shadow-[0_0_34px_rgba(0,119,181,0.7)]"
+                  >
+                    Start with LinkedIn
+                  </button>
+                  <button
                     onClick={() => signIn("github")}
                     className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_34px_rgba(250,204,21,0.7)]"
                   >
-                Start with GitHub
-              </button>
-            </div>
+                    Start with GitHub
+                  </button>
+                </div>
             <p className="text-xs text-[#9aa2c2]">
                   OAuth only · No anonymous accounts · You choose what you
                   share.
@@ -204,124 +508,137 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-1 justify-center sm:mt-0">
-            <div className="relative w-full max-w-md animate-[float_10s_ease-in-out_infinite] rounded-3xl border border-[#343d55] bg-[#0e1422] p-4 shadow-xl shadow-[0_0_50px_rgba(15,23,42,0.9)]">
-              <div className="pointer-events-none absolute -inset-px rounded-3xl border border-[#ffd44733] bg-[conic-gradient(from_180deg_at_50%_0%,rgba(250,204,21,0.4),transparent_35%,rgba(190,242,100,0.4),transparent_70%,rgba(250,204,21,0.4))] opacity-0 blur-xl transition-opacity duration-500 hover:opacity-100" />
-              <div className="relative space-y-3 text-[11px] text-[#e4e8f7]">
-                <div className="flex items-center justify-between text-[#d3dcec]">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-[#bef264]" />
-                    Matching you with
-                  </span>
-                  <span className="rounded-full bg-[#151c33] px-2 py-0.5 text-[10px] text-[#d3dcec]">
-                    Backend · AI/ML · Career
-                  </span>
-                </div>
+          {/* Matching Scenario Box */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-full max-w-md rounded-2xl border border-[#343d55] bg-[#050816] p-6 shadow-xl">
+              <div className="mb-4 text-center">
+                <p className="text-xs font-semibold text-[#bef264] uppercase tracking-wide">
+                  Matching with {matchingScenarios[currentScenarioIndex].scenario}
+                </p>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2 rounded-2xl border border-[#343d55] bg-[#050816] p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#232a3e] text-[10px] font-semibold">
-                        Y
-                      </span>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-[#7d88aa]">
-                          You
-                        </p>
-                        <p className="text-xs font-semibold text-[#f8f3e8]">
-                          Senior Backend Eng
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-[#c7d0f0]">
-                      “Let&apos;s talk architecture, scaling, and career jumps.”
-                    </p>
-                    <p className="text-[10px] text-[#9aa2c2]">
-                      LinkedIn · GitHub connected
-                    </p>
+              {/* Your Profile */}
+              <div className="mb-4 rounded-xl border border-[#343d55] bg-[#101523] p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd447] text-lg font-bold text-[#18120b]">
+                    {matchingScenarios[currentScenarioIndex].you.initial}
                   </div>
-
-                  <div className="space-y-2 rounded-2xl border border-[#343d55] bg-[#050816] p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#ffd447] text-[10px] font-semibold text-[#18120b]">
-                        A
-                      </span>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-[#7d88aa]">
-                          Your match
-                        </p>
-                        <p className="text-xs font-semibold text-[#f8f3e8]">
-                          Staff Eng · SF · ML
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-[#c7d0f0]">
-                      “Happy to share interview tips and startup war stories.”
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#f8f3e8]">You</p>
+                    <p className="text-xs text-[#9aa2c2] mt-0.5">
+                      {matchingScenarios[currentScenarioIndex].you.role}
                     </p>
-                    <p className="text-[10px] text-[#bef264]">
-                      Verified via LinkedIn
+                    <p className="text-xs text-[#d3dcec] mt-2 leading-relaxed">
+                      &quot;{matchingScenarios[currentScenarioIndex].you.quote}&quot;
                     </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between rounded-2xl border border-[#343d55] bg-[#050816] px-3 py-2 text-[11px] text-[#d3dcec]">
-                  <span>Session starts in 00:07…</span>
-                  <div className="flex gap-2">
-                    <button className="rounded-full bg-[#141b30] px-3 py-1 text-[11px] hover:bg-[#1b2340]">
-                      Text only
-                    </button>
-                    <button className="rounded-full bg-[#bef264] px-3 py-1 text-[11px] font-medium text-[#0b1018] hover:bg-[#d9f99d]">
-                      Join with video
-                    </button>
+              {/* VS Divider */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-px bg-[#343d55]" />
+                <div className="px-2 py-1 rounded-full bg-[#343d55] text-[10px] font-semibold text-[#9aa2c2]">
+                  VS
+                </div>
+                <div className="flex-1 h-px bg-[#343d55]" />
+              </div>
+
+              {/* Match Profile */}
+              <div className="mb-4 rounded-xl border border-[#343d55] bg-[#101523] p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#bef264] text-lg font-bold text-[#18120b]">
+                    {matchingScenarios[currentScenarioIndex].match.initial}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-[#f8f3e8]">Match</p>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#bef264]/20 text-[#bef264]">
+                        <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Verified
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#9aa2c2] mt-0.5">
+                      {matchingScenarios[currentScenarioIndex].match.role}
+                    </p>
+                    <p className="text-xs text-[#d3dcec] mt-2 leading-relaxed">
+                      &quot;{matchingScenarios[currentScenarioIndex].match.quote}&quot;
+                    </p>
+                    <p className="text-[10px] text-[#9aa2c2] mt-2">
+                      {matchingScenarios[currentScenarioIndex].match.verified}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </section>
 
       <section
         id="how-it-works"
-        className="border-t border-[#272f45] bg-[#070b12] px-4 py-16"
+        className="relative bg-white px-4 py-24"
       >
-        <div className="mx-auto max-w-6xl space-y-8">
-          <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-left">
-            How it works
-          </h2>
-          <div className="grid gap-6 text-sm text-[#d3dcec] sm:grid-cols-3">
-            <div className="space-y-2 rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2]">
-                1. Sign in
-              </p>
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                Authenticate with LinkedIn or GitHub
-              </p>
-              <p>
-                We use OAuth to confirm you’re a real professional. No passwords
+        <div className="mx-auto max-w-6xl space-y-16">
+          <div className="text-center">
+            <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              How it works
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Three simple steps to start meaningful conversations
+            </p>
+          </div>
+          <div className="grid gap-8 sm:grid-cols-3">
+            <div className="group relative space-y-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-8 shadow-sm transition-all hover:shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ffd447] text-2xl font-bold text-slate-900">
+                1
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  Sign in
+                </h3>
+                <p className="mt-2 text-base font-medium text-slate-700">
+                  Authenticate with LinkedIn or GitHub
+                </p>
+              </div>
+              <p className="text-base leading-relaxed text-slate-600">
+                We use OAuth to confirm you're a real professional. No passwords
                 stored, no anonymous accounts.
               </p>
             </div>
-            <div className="space-y-2 rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2]">
-                2. Choose what to talk about
-              </p>
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                Pick topics and your seniority
-              </p>
-              <p>
+            <div className="group relative space-y-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-8 shadow-sm transition-all hover:shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ffd447] text-2xl font-bold text-slate-900">
+                2
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  Choose topics
+                </h3>
+                <p className="mt-2 text-base font-medium text-slate-700">
+                  Pick what you want to discuss
+                </p>
+              </div>
+              <p className="text-base leading-relaxed text-slate-600">
                 Select themes like backend, AI/ML, interviews, startups, or
                 networking. We&apos;ll use this to find a relevant match.
               </p>
             </div>
-            <div className="space-y-2 rounded-2xl border border-[#272f45] bg-[#0c111c] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2]">
-                3. Get matched
-              </p>
-              <p className="text-sm font-medium text-[#f8f3e8]">
-                1:1 live conversation in seconds
-              </p>
-              <p>
+            <div className="group relative space-y-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-8 shadow-sm transition-all hover:shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ffd447] text-2xl font-bold text-slate-900">
+                3
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">
+                  Get matched
+                </h3>
+                <p className="mt-2 text-base font-medium text-slate-700">
+                  1:1 live conversation in seconds
+                </p>
+              </div>
+              <p className="text-base leading-relaxed text-slate-600">
                 You&apos;re paired with another tech person for a focused
                 conversation. Skip, block, or report anytime.
               </p>
@@ -332,166 +649,90 @@ export default function Home() {
 
       <section
         id="safety"
-        className="border-t border-[#272f45] bg-[#050911] px-4 py-16"
+        className="relative bg-gradient-to-b from-slate-50 to-white px-4 py-24"
       >
-        <div className="mx-auto max-w-6xl space-y-6 text-sm text-[#d3dcec]">
-          <h2 className="text-2xl font-semibold tracking-tight">Safety first</h2>
-          <p className="max-w-2xl">
-            Omegle struggled because it couldn&apos;t reliably authenticate or
-            hold people accountable. TechConnect Live starts with identity: every
-            user signs in with LinkedIn or GitHub, and you can block or report
-            anyone in one tap.
-          </p>
+        <div className="mx-auto max-w-6xl space-y-16 text-base">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Safety first</h2>
+            <p className="max-w-3xl mx-auto text-lg leading-relaxed text-slate-600">
+              We start with identity: every user signs in with LinkedIn or GitHub, 
+              and you can block or report anyone in one tap.
+            </p>
+          </div>
           
-          {/* Auto-scrolling Carousel */}
-          <div className="relative overflow-hidden">
-            {/* Gradient fade on left edge */}
-            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-20 bg-gradient-to-r from-[#050911] to-transparent" />
-            {/* Gradient fade on right edge */}
-            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-20 bg-gradient-to-l from-[#050911] to-transparent" />
-            <div 
-              className="flex gap-4" 
-              style={{ 
-                animation: "scroll 60s linear infinite",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.animationPlayState = "paused";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.animationPlayState = "running";
-              }}
-            >
-              {/* Duplicate items for seamless loop */}
-              {[...Array(2)].map((_, setIndex) => (
-                <div key={setIndex} className="flex gap-4">
-                  {/* Verified Identity */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd447]/20">
-                        <svg className="h-5 w-5 text-[#ffd447]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">Verified Identity</p>
-                        <p className="text-xs text-[#9aa2c2]">LinkedIn & GitHub OAuth</p>
-                      </div>
+          {/* Layered Security Model Visualization */}
+          <div className="relative">
+            {/* Center Core - Your Safety */}
+            <div className="flex justify-center mb-16">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#ffd447]/20 via-[#bef264]/20 to-[#ffd447]/20 rounded-full blur-3xl" />
+                <div className="relative rounded-2xl border-2 border-[#ffd447] bg-white p-10 sm:p-14 shadow-xl">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#ffd447] mb-2">
+                      <svg className="h-8 w-8 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
                     </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Every user is authenticated through professional profiles. No anonymous accounts or throwaway identities.
-                    </p>
-                  </div>
-
-                  {/* Block & Report */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
-                        <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">One-Tap Block & Report</p>
-                        <p className="text-xs text-[#9aa2c2]">Instant Protection</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Quickly block or report anyone with a single tap. Bad actors are flagged and removed from the platform.
-                    </p>
-                  </div>
-
-                  {/* Screenshot Prevention */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
-                        <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">Screenshot Protection</p>
-                        <p className="text-xs text-[#9aa2c2]">Privacy First</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Advanced detection prevents screenshots and screen captures. Your conversations stay private and protected.
-                    </p>
-                  </div>
-
-                  {/* Right-Click Prevention */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
-                        <svg className="h-5 w-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">Right-Click Protection</p>
-                        <p className="text-xs text-[#9aa2c2]">Content Security</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Context menus and text selection are disabled to prevent unauthorized copying or saving of content.
-                    </p>
-                  </div>
-
-                  {/* DevTools Detection */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/20">
-                        <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">DevTools Detection</p>
-                        <p className="text-xs text-[#9aa2c2]">Active Monitoring</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Real-time monitoring detects developer tools and suspicious activity to protect your privacy.
-                    </p>
-                  </div>
-
-                  {/* Keyboard Shortcut Blocking */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20">
-                        <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">Shortcut Blocking</p>
-                        <p className="text-xs text-[#9aa2c2]">Print Screen & More</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      Print Screen, Snipping Tool shortcuts, and other screenshot methods are blocked to maintain privacy.
-                    </p>
-                  </div>
-
-                  {/* Account Accountability */}
-                  <div className="flex-shrink-0 w-[320px] rounded-2xl border border-[#272f45] bg-[#0c111c] p-5">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-500/20">
-                        <svg className="h-5 w-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#f8f3e8]">Account Accountability</p>
-                        <p className="text-xs text-[#9aa2c2]">Tracked Behavior</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[#d3dcec]">
-                      User behavior is tracked. Repeat offenders and flagged accounts are automatically removed from the platform.
-                    </p>
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">Your Safety</h3>
+                    <p className="text-sm text-slate-600 max-w-xs">Protected by multiple layers</p>
                   </div>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Layer 1 - Identity & Authentication */}
+            <div className="mb-8">
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-4xl">
+                  <div className="relative flex flex-wrap justify-center gap-4 sm:gap-6">
+                    <SafetyFeatureCard
+                      title="Verified Identity"
+                      subtitle="LinkedIn & GitHub OAuth"
+                      description="Every user authenticated through professional profiles"
+                    />
+                    <SafetyFeatureCard
+                      title="One-Tap Block & Report"
+                      subtitle="Instant Protection"
+                      description="Quickly block or report anyone with a single tap"
+                    />
+                    <SafetyFeatureCard
+                      title="Account Accountability"
+                      subtitle="Tracked Behavior"
+                      description="Repeat offenders automatically removed"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Layer 2 - Privacy Protection */}
+            <div className="mb-8">
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-5xl">
+                  <div className="relative flex flex-wrap justify-center gap-4 sm:gap-6">
+                    <SafetyFeatureCard
+                      title="Screenshot Protection"
+                      subtitle="Privacy First"
+                      description="Advanced detection prevents screenshots"
+                    />
+                    <SafetyFeatureCard
+                      title="Right-Click Protection"
+                      subtitle="Content Security"
+                      description="Context menus and text selection disabled"
+                    />
+                    <SafetyFeatureCard
+                      title="Shortcut Blocking"
+                      subtitle="Print Screen & More"
+                      description="Screenshot methods are blocked"
+                    />
+                    <SafetyFeatureCard
+                      title="DevTools Detection"
+                      subtitle="Active Monitoring"
+                      description="Real-time monitoring detects suspicious activity"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -499,34 +740,41 @@ export default function Home() {
 
       <section
         id="faq"
-        className="border-t border-[#272f45] bg-[#050911] px-4 pb-16 pt-12"
+        className="relative bg-slate-50 px-4 pb-24 pt-20"
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 text-sm text-[#d3dcec] sm:flex-row sm:items-start">
-          <div className="flex-1 space-y-3">
-            <h2 className="text-2xl font-semibold tracking-tight">
+        <div className="mx-auto flex max-w-6xl flex-col gap-12 text-base sm:flex-row sm:items-start">
+          <div className="flex-1 space-y-6">
+            <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
               Ready to meet the tech internet?
             </h2>
-            <p className="max-w-md">
+            <p className="max-w-md text-lg leading-relaxed text-slate-600">
               We&apos;re starting with web, LinkedIn and GitHub sign-in, and
               1:1 matching. Mobile apps and more advanced filters will follow.
             </p>
           </div>
-          <div className="flex-1 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Early access
+          <div className="flex-1 space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Early access
+              </p>
+              <p className="mt-2 text-xl font-semibold text-slate-900">
+                Want to be one of the first to try it?
+              </p>
+            </div>
+            <p className="text-base leading-relaxed text-slate-600">
+              Sign in with your LinkedIn or GitHub account to get started.
             </p>
-            <p className="text-sm font-medium text-[#f8f3e8]">
-              Want to be one of the first to try it?
-            </p>
-            <p className="text-xs">
-              We&apos;ll soon connect these buttons to real LinkedIn/GitHub
-              authentication. For now, they&apos;re just UI entry points.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <button className="inline-flex h-10 flex-1 items-center justify-center rounded-full bg-[#ffd447] px-4 text-xs font-semibold text-[#18120b] shadow-sm transition hover:bg-[#facc15]">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => signIn("linkedin")}
+                className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-[#0077b5] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#006399] hover:shadow-md"
+              >
                 Sign in with LinkedIn
               </button>
-              <button className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-4 text-xs font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]">
+              <button
+                onClick={() => signIn("github")}
+                className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border-2 border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:shadow-sm"
+              >
                 Sign in with GitHub
               </button>
             </div>

@@ -139,6 +139,15 @@ export default function ProfilePage() {
       }
       try {
         const res = await fetch("/api/me");
+        if (!res.ok) {
+          console.error("Failed to fetch user:", res.status, res.statusText);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          return;
+        }
         const data: UserResponse = await res.json();
         if (data.user) {
           setUser(data.user);

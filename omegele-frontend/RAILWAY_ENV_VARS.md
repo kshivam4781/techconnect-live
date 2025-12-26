@@ -8,11 +8,13 @@ Some environment variables are empty in Railway, which will cause runtime errors
 Set these in Railway dashboard → Variables:
 
 ```
-DATABASE_URL=postgresql://postgres.ebbxawwtvsjbswdpmbip:RightWing%402026@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-GITHUB_CLIENT_ID=Ov23lic2nlcrrq0iUZ6N
-GITHUB_CLIENT_SECRET=92c83a648d8a3d3625d9c7133722d6c29af9b1c7
-NEXTAUTH_SECRET=ec7adc6ba30a28abc8d0475265396427cca1ac1a6feb64a2edb86ccd21b48ea1
-NEXTAUTH_URL=https://techconnect-live-production.up.railway.app
+DATABASE_URL=postgresql://postgres:password@host:5432/database
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+LINKEDIN_CLIENT_ID=your_linkedin_client_id
+LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
+NEXTAUTH_SECRET=your_nextauth_secret_here
+NEXTAUTH_URL=https://vinamah.com
 HOSTNAME=0.0.0.0
 NODE_ENV=production
 ```
@@ -22,10 +24,10 @@ NODE_ENV=production
 ### 1. NEXTAUTH_URL
 **MUST BE SET TO:**
 ```
-https://techconnect-live-production.up.railway.app
+https://vinamah.com
 ```
 
-**Why:** NextAuth needs this to generate correct callback URLs. Without it, authentication won't work.
+**Why:** NextAuth needs this to generate correct callback URLs. Without it, authentication won't work. This should match your production domain.
 
 ### 2. HOSTNAME
 **SET TO:**

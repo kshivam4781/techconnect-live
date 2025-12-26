@@ -132,6 +132,17 @@ export default function OnboardingPage() {
       setLoading(true);
       try {
         const res = await fetch("/api/me");
+        if (!res.ok) {
+          console.error("Failed to fetch user:", res.status, res.statusText);
+          setLoading(false);
+          return;
+        }
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", contentType);
+          setLoading(false);
+          return;
+        }
         const data: UserResponse = await res.json();
         if (data.user) {
           setUser(data.user);

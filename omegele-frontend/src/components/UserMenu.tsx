@@ -50,12 +50,12 @@ export function UserMenu() {
             className="h-6 w-6 rounded-full border border-[#343d55] object-cover"
           />
         ) : (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[#343d55] bg-[#111827] text-xs font-semibold">
-            {(user?.name || user?.email || "?")
-              .toString()
-              .charAt(0)
-              .toUpperCase()}
-          </div>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/icon.png?v=3"
+            alt="User"
+            className="h-6 w-6 rounded-full border border-[#343d55] object-cover"
+          />
         )}
         <span className="hidden sm:inline">
           {user?.name || user?.email || "User"}
