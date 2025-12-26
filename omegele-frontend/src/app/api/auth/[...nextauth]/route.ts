@@ -13,17 +13,17 @@ export const authOptions = {
     LinkedIn({
       clientId: process.env.LINKEDIN_CLIENT_ID ?? "",
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
-      authorization: {
-        params: {
-          scope: "openid profile email",
-        },
-      },
     }),
   ],
+  pages: {
+    error: "/auth/error",
+  },
+  debug: process.env.NODE_ENV === "development",
   callbacks: {
-    async jwt({ token, account, profile }: any) {
+    async jwt({ token, account, profile, user }: any) {
       // On initial sign-in, upsert the user and their provider account
-      if (account && profile) {
+      // Note: For some providers, profile might be undefined, so we check account
+      if (account) {
         try {
           // Handle different profile structures for different providers
           let email: string | undefined;
@@ -32,37 +32,81 @@ export const authOptions = {
 
           if (account.provider === "github") {
             // GitHub profile structure
-            email = (profile.email || token.email) as string | undefined;
+            email = (profile?.email || token.email) as string | undefined;
             name =
-              (profile.name as string | undefined) ||
-              (profile.login as string | undefined) ||
+              (profile?.name as string | undefined) ||
+              (profile?.login as string | undefined) ||
               (token.name as string | undefined) ||
               null;
             image =
-              (profile.avatar_url as string | undefined) ||
+              (profile?.avatar_url as string | undefined) ||
               (token.picture as string | undefined) ||
               null;
           } else if (account.provider === "linkedin") {
-            // LinkedIn profile structure
-            email = (profile.email as string | undefined) || token.email;
-            const firstName = (profile.localizedFirstName as string | undefined) || "";
-            const lastName = (profile.localizedLastName as string | undefined) || "";
+            // LinkedIn profile structure - handle both OpenID Connect and legacy formats
+            // Profile might be in token or profile object
+            const linkedinProfile = profile || token;
+            
+            email = 
+              (linkedinProfile?.email as string | undefined) ||
+              (linkedinProfile?.emailAddress as string | undefined) ||
+              token.email;
+            
+            // Try different possible name fields
+            const firstName = 
+              (linkedinProfile?.localizedFirstName as string | undefined) ||
+              (linkedinProfile?.given_name as string | undefined) ||
+              (linkedinProfile?.firstName as string | undefined) ||
+              "";
+            const lastName = 
+              (linkedinProfile?.localizedLastName as string | undefined) ||
+              (linkedinProfile?.family_name as string | undefined) ||
+              (linkedinProfile?.lastName as string | undefined) ||
+              "";
+            
             name = firstName && lastName 
               ? `${firstName} ${lastName}`.trim()
-              : (profile.name as string | undefined) || token.name || null;
+              : (linkedinProfile?.name as string | undefined) || 
+                (linkedinProfile?.displayName as string | undefined) ||
+                token.name || 
+                null;
+            
+            // Try different possible image fields
             image =
-              (profile.profilePicture?.displayImage as string | undefined) ||
+              (linkedinProfile?.profilePicture?.displayImage as string | undefined) ||
+              (linkedinProfile?.picture as string | undefined) ||
+              (linkedinProfile?.pictureUrl as string | undefined) ||
               (token.picture as string | undefined) ||
               null;
+            
+            // Log profile structure for debugging
+            if (process.env.NODE_ENV === "development") {
+              console.log("LinkedIn account:", JSON.stringify(account, null, 2));
+              console.log("LinkedIn profile:", JSON.stringify(profile, null, 2));
+              console.log("LinkedIn token:", JSON.stringify(token, null, 2));
+            }
           } else {
             // Fallback for other providers
-            email = (profile.email || token.email) as string | undefined;
-            name = (profile.name as string | undefined) || token.name || null;
-            image = (profile.picture || token.picture) as string | undefined || null;
+            email = (profile?.email || token.email) as string | undefined;
+            name = (profile?.name as string | undefined) || token.name || null;
+            image = (profile?.picture || token.picture) as string | undefined || null;
           }
 
           // Get the provider account ID correctly
-          const providerAccountId = account.providerAccountId || String(account.id);
+          // LinkedIn uses 'sub' claim in OpenID Connect, which NextAuth maps to providerAccountId
+          const providerAccountId = 
+            account.providerAccountId || 
+            (account.provider === "linkedin" && (profile as any)?.sub) ||
+            String(account.id);
+          
+          if (process.env.NODE_ENV === "development") {
+            console.log("Provider account details:", {
+              provider: account.provider,
+              providerAccountId,
+              accountId: account.id,
+              hasProfile: !!profile,
+            });
+          }
 
           // 1) First, try to find or create the Account record
           // This will help us find the existing user if one exists
@@ -144,9 +188,12 @@ export const authOptions = {
             message: error.message,
             code: error.code,
             meta: error.meta,
+            provider: account?.provider,
+            profile: profile ? JSON.stringify(profile, null, 2) : "No profile",
           });
-          // Re-throw with more context for debugging
-          throw error;
+          // Don't re-throw - return token with error flag to prevent redirect loop
+          // The error will be caught by NextAuth and shown on error page
+          throw new Error(`Authentication failed: ${error.message || "Unknown error"}`);
         }
       }
 
