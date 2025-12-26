@@ -11,6 +11,7 @@ export default function AuthErrorPage() {
     Configuration: "There is a problem with the server configuration.",
     AccessDenied: "You do not have permission to sign in.",
     Verification: "The verification token has expired or has already been used.",
+    Callback: "An error occurred during authentication. Please check the server logs for details.",
     Default: "An error occurred during authentication. Please try again.",
   };
 

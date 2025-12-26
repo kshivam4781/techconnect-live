@@ -20,6 +20,16 @@ export const authOptions = {
   },
   debug: process.env.NODE_ENV === "development",
   callbacks: {
+    async signIn({ user, account, profile }: any) {
+      // Allow sign in - we'll handle user creation in JWT callback
+      // This is just to log what we're receiving
+      if (process.env.NODE_ENV === "development" && account?.provider === "linkedin") {
+        console.log("LinkedIn signIn callback - account:", JSON.stringify(account, null, 2));
+        console.log("LinkedIn signIn callback - profile:", JSON.stringify(profile, null, 2));
+        console.log("LinkedIn signIn callback - user:", JSON.stringify(user, null, 2));
+      }
+      return true;
+    },
     async jwt({ token, account, profile, user }: any) {
       // On initial sign-in, upsert the user and their provider account
       // Note: For some providers, profile might be undefined, so we check account
@@ -94,10 +104,37 @@ export const authOptions = {
 
           // Get the provider account ID correctly
           // LinkedIn uses 'sub' claim in OpenID Connect, which NextAuth maps to providerAccountId
-          const providerAccountId = 
-            account.providerAccountId || 
-            (account.provider === "linkedin" && (profile as any)?.sub) ||
-            String(account.id);
+          let providerAccountId: string | undefined = account.providerAccountId;
+          
+          // If providerAccountId is missing, try to get it from profile or account
+          if (!providerAccountId || providerAccountId === "undefined" || providerAccountId === "null") {
+            if (account.provider === "linkedin") {
+              // Try multiple possible sources for LinkedIn ID
+              providerAccountId = 
+                (profile as any)?.sub || 
+                (profile as any)?.id ||
+                (token as any)?.sub ||
+                (account as any)?.sub ||
+                (account as any)?.id ||
+                String(account.id || "");
+            } else {
+              providerAccountId = String(account.id || "");
+            }
+          }
+          
+          // Final fallback - generate a unique ID if still missing
+          if (!providerAccountId || providerAccountId === "undefined" || providerAccountId === "null" || providerAccountId === "") {
+            console.error("CRITICAL: providerAccountId is missing!", {
+              provider: account.provider,
+              account: JSON.stringify(account, null, 2),
+              profile: profile ? JSON.stringify(profile, null, 2) : "No profile",
+            });
+            // Use a fallback - this shouldn't happen but prevents crash
+            providerAccountId = `fallback_${account.provider}_${Date.now()}`;
+          }
+          
+          // Ensure it's a string
+          providerAccountId = String(providerAccountId);
           
           if (process.env.NODE_ENV === "development") {
             console.log("Provider account details:", {
@@ -105,6 +142,8 @@ export const authOptions = {
               providerAccountId,
               accountId: account.id,
               hasProfile: !!profile,
+              accountKeys: Object.keys(account),
+              profileKeys: profile ? Object.keys(profile) : [],
             });
           }
 
@@ -169,13 +208,35 @@ export const authOptions = {
             }
 
             // Create the Account record
-            await prisma.account.create({
-              data: {
-                provider: account.provider,
-                providerAccountId,
-                userId: user.id,
-              },
-            });
+            try {
+              await prisma.account.create({
+                data: {
+                  provider: account.provider,
+                  providerAccountId,
+                  userId: user.id,
+                },
+              });
+            } catch (dbError: any) {
+              // If account already exists (race condition), find it
+              if (dbError.code === "P2002") {
+                accountRecord = await prisma.account.findUnique({
+                  where: {
+                    provider_providerAccountId: {
+                      provider: account.provider,
+                      providerAccountId,
+                    },
+                  },
+                  include: { user: true },
+                });
+                if (accountRecord) {
+                  user = accountRecord.user;
+                } else {
+                  throw dbError;
+                }
+              } else {
+                throw dbError;
+              }
+            }
           }
 
           token.userId = user.id;
