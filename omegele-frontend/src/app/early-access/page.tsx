@@ -26,18 +26,26 @@ export default function EarlyAccessPage() {
             your LinkedIn or GitHub account. For now, think of it as the lobby
             sign that says “we&apos;re setting up the room.”
           </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <button className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-[#ffd447] px-4 text-xs font-semibold text-[#18120b] shadow-sm transition hover:bg-[#facc15]">
-              I&apos;m interested (LinkedIn)
-            </button>
-            <button className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-4 text-xs font-medium text-[#f8f3e8] transition hover:border-[#6471a3] hover:bg-[#151f35]">
-              I&apos;m interested (GitHub)
-            </button>
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-[#d3dcec]">
+              To join the early access waitlist, please{" "}
+              <a
+                href="/"
+                className="text-[#ffd447] hover:underline font-medium"
+              >
+                sign in with LinkedIn or GitHub
+              </a>
+              {" "}from our homepage. Once signed in, you&apos;ll automatically be considered for early access.
+            </p>
+            <a
+              href="/"
+              className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#ffd447] px-4 text-xs font-semibold text-[#18120b] shadow-sm transition hover:bg-[#facc15]"
+            >
+              Go to Homepage to Sign In
+            </a>
           </div>
           <p className="text-[11px] text-[#9aa2c2]">
-            Once wired up, these buttons will add you to a waitlist with the
-            right metadata (role, interests, region) so we can invite balanced
-            cohorts instead of random blasts.
+            Early access is currently managed through our main platform. Sign in to get started.
           </p>
         </section>
       </main>
