@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession, signOut } from "next-auth/react";
 import Snowfall from "react-snowfall";
+import { PeopleYouMayKnow } from "@/components/PeopleYouMayKnow";
 
 // Login Dropdown Component
 function LoginDropdown({ variant = "hero" }: { variant?: "hero" | "faq" }) {
@@ -714,6 +715,13 @@ export default function Home() {
                 </p>
               </div>
             </div>
+
+            {/* People You May Know - Only show for logged-in users */}
+            {session && !checkingOnboarding && (
+              <div className="mt-6 max-w-xl">
+                <PeopleYouMayKnow />
+              </div>
+            )}
           </div>
 
           {/* Matching Scenario Box */}
