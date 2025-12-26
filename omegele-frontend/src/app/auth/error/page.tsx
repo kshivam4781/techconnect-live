@@ -2,8 +2,9 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
@@ -17,6 +18,19 @@ export default function AuthErrorPage() {
 
   const errorMessage = errorMessages[error || ""] || errorMessages.Default;
 
+  return (
+    <>
+      <p className="text-sm text-[#d3dcec]">{errorMessage}</p>
+      {error && (
+        <p className="text-xs text-[#9aa2c2] font-mono">
+          Error code: {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+export default function AuthErrorPage() {
   return (
     <div className="min-h-screen bg-[#0b1018] flex items-center justify-center px-4">
       <div className="max-w-md w-full">
@@ -39,12 +53,9 @@ export default function AuthErrorPage() {
           <h1 className="text-2xl font-semibold text-[#f8f3e8]">
             Authentication Error
           </h1>
-          <p className="text-sm text-[#d3dcec]">{errorMessage}</p>
-          {error && (
-            <p className="text-xs text-[#9aa2c2] font-mono">
-              Error code: {error}
-            </p>
-          )}
+          <Suspense fallback={<p className="text-sm text-[#d3dcec]">Loading error details...</p>}>
+            <AuthErrorContent />
+          </Suspense>
           <div className="flex flex-col gap-3 pt-4">
             <Link
               href="/"
