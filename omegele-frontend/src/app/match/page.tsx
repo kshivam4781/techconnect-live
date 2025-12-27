@@ -165,19 +165,26 @@ export default function MatchPage() {
   }, [peerConnectionState, matchStatus, currentSessionId, callMode, isConnected, joinQueue]);
 
   // Handle video stream for ready state (preview before searching)
+  // Note: This is now handled by useWebRTC hook, but keeping as fallback
   useEffect(() => {
-    if (matchStatus === "ready" && callMode === "VIDEO" && !localVideoRef.current?.srcObject) {
-      // Request stream again if not already set
-      navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      }).then((stream) => {
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+    if (matchStatus === "ready" && callMode === "VIDEO") {
+      // Check if stream exists on video element or if useWebRTC will handle it
+      // The useWebRTC hook should handle stream management, so we just ensure it's playing
+      const checkStream = () => {
+        if (localVideoRef.current?.srcObject) {
+          const stream = localVideoRef.current.srcObject as MediaStream;
+          const activeTracks = stream.getTracks().filter(t => t.readyState === 'live');
+          if (activeTracks.length > 0 && localVideoRef.current.paused) {
+            localVideoRef.current.play().catch((err) => {
+              console.error("Error playing local video in ready state check:", err);
+            });
+          }
         }
-      }).catch((error) => {
-        console.error("Error getting media in ready state:", error);
-      });
+      };
+      
+      // Check immediately and after a delay
+      checkStream();
+      setTimeout(checkStream, 500);
     }
   }, [matchStatus, callMode]);
 
@@ -261,6 +268,9 @@ export default function MatchPage() {
     };
   }, [matchStatus]);
 
+  // Developer tools blocking disabled for debugging purposes
+  // Uncomment the code below if you want to re-enable protection features
+  /*
   // Protection: Prevent right-click context menu (except in input fields)
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -434,6 +444,7 @@ export default function MatchPage() {
       clearInterval(devToolsInterval);
     };
   }, []);
+  */
 
 
   // Protection: Disable text selection via CSS
@@ -1239,6 +1250,44 @@ export default function MatchPage() {
     }
   }, [matchData, matchStatus, startCall, callMode]);
 
+  // Debug: Monitor video element states
+  useEffect(() => {
+    const logVideoStates = () => {
+      if (localVideoRef.current) {
+        const localStream = localVideoRef.current.srcObject as MediaStream;
+        console.log("Local video state:", {
+          hasStream: !!localStream,
+          tracks: localStream ? localStream.getTracks().length : 0,
+          videoTracks: localStream ? localStream.getVideoTracks().length : 0,
+          audioTracks: localStream ? localStream.getAudioTracks().length : 0,
+          paused: localVideoRef.current.paused,
+          readyState: localVideoRef.current.readyState,
+          muted: localVideoRef.current.muted,
+        });
+      }
+      if (remoteVideoRef.current) {
+        const remoteStream = remoteVideoRef.current.srcObject as MediaStream;
+        console.log("Remote video state:", {
+          hasStream: !!remoteStream,
+          tracks: remoteStream ? remoteStream.getTracks().length : 0,
+          videoTracks: remoteStream ? remoteStream.getVideoTracks().length : 0,
+          audioTracks: remoteStream ? remoteStream.getAudioTracks().length : 0,
+          paused: remoteVideoRef.current.paused,
+          readyState: remoteVideoRef.current.readyState,
+          muted: remoteVideoRef.current.muted,
+          volume: remoteVideoRef.current.volume,
+        });
+      }
+    };
+    
+    // Log immediately and periodically when in relevant states
+    if (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") {
+      logVideoStates();
+      const interval = setInterval(logVideoStates, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [matchStatus]);
+
   // Ensure remote video is properly displayed when in-call
   useEffect(() => {
     if (matchStatus === "in-call" && remoteVideoRef.current) {
@@ -1268,6 +1317,8 @@ export default function MatchPage() {
                 console.error("Error playing remote video in in-call effect:", err);
               });
             }
+          } else {
+            console.log("Remote video element exists but no stream attached in in-call state");
           }
         }
       };
@@ -1277,7 +1328,7 @@ export default function MatchPage() {
       
       // Check periodically for a short time to catch delayed stream attachment
       const interval = setInterval(checkAndSetupRemoteVideo, 500);
-      const timeout = setTimeout(() => clearInterval(interval), 5000);
+      const timeout = setTimeout(() => clearInterval(interval), 10000);
       
       return () => {
         clearInterval(interval);
@@ -2298,6 +2349,14 @@ export default function MatchPage() {
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded (matched state)");
                         if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Audio tracks in metadata handler:", audioTracks.length);
+                            audioTracks.forEach((track) => {
+                              console.log("Audio track:", track.label, "enabled:", track.enabled);
+                            });
+                          }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
@@ -2308,11 +2367,34 @@ export default function MatchPage() {
                       onCanPlay={() => {
                         console.log("Remote video can play (matched state)");
                         if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Audio tracks in canplay handler:", audioTracks.length);
+                          }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
                             console.error("Error playing remote video on canplay (matched):", err);
                           });
+                        }
+                      }}
+                      onPlay={() => {
+                        console.log("Remote video started playing (matched state)");
+                        if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Remote video playing - audio tracks:", audioTracks.length, "muted:", remoteVideoRef.current.muted, "volume:", remoteVideoRef.current.volume);
+                            audioTracks.forEach((track) => {
+                              console.log("Playing audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                            });
+                          }
+                          // Ensure audio is still enabled
+                          remoteVideoRef.current.muted = false;
+                          if (remoteVideoRef.current.volume !== undefined) {
+                            remoteVideoRef.current.volume = 1.0;
+                          }
                         }
                       }}
                     />
@@ -2411,27 +2493,55 @@ export default function MatchPage() {
                       muted={false}
                       className="h-full w-full object-cover bg-[#111827]"
                       onLoadedMetadata={() => {
-                        console.log("Remote video metadata loaded");
+                        console.log("Remote video metadata loaded (in-call)");
                         if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Audio tracks in metadata handler (in-call):", audioTracks.length);
+                            audioTracks.forEach((track) => {
+                              console.log("Audio track:", track.label, "enabled:", track.enabled);
+                            });
+                          }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
-                            console.error("Error playing remote video on metadata:", err);
+                            console.error("Error playing remote video on metadata (in-call):", err);
                           });
                         }
                       }}
                       onCanPlay={() => {
-                        console.log("Remote video can play");
+                        console.log("Remote video can play (in-call)");
                         if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Audio tracks in canplay handler (in-call):", audioTracks.length);
+                          }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
                           remoteVideoRef.current.play().catch((err) => {
-                            console.error("Error playing remote video on canplay:", err);
+                            console.error("Error playing remote video on canplay (in-call):", err);
                           });
                         }
                       }}
                       onPlay={() => {
-                        console.log("Remote video started playing");
+                        console.log("Remote video started playing (in-call)");
+                        if (remoteVideoRef.current) {
+                          const stream = remoteVideoRef.current.srcObject as MediaStream;
+                          if (stream) {
+                            const audioTracks = stream.getAudioTracks();
+                            console.log("Remote video playing (in-call) - audio tracks:", audioTracks.length, "muted:", remoteVideoRef.current.muted, "volume:", remoteVideoRef.current.volume);
+                            audioTracks.forEach((track) => {
+                              console.log("Playing audio track (in-call):", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                            });
+                          }
+                          // Ensure audio is still enabled
+                          remoteVideoRef.current.muted = false;
+                          if (remoteVideoRef.current.volume !== undefined) {
+                            remoteVideoRef.current.volume = 1.0;
+                          }
+                        }
                       }}
                     />
                     {!remoteVideoRef.current?.srcObject && (
