@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSocket } from "@/hooks/useSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import FlagModal from "@/components/FlagModal";
+import SessionFeedbackModal from "@/components/SessionFeedbackModal";
 
 type MatchStatus = "idle" | "permission" | "ready" | "searching" | "matched" | "in-call" | "ended";
 
@@ -61,6 +62,7 @@ export default function MatchPage() {
   const [isExtendedConversation, setIsExtendedConversation] = useState<boolean>(false);
   const [extendedDuration] = useState<number>(30 * 60); // 30 minutes in seconds
   const [isAcceptingTerms, setIsAcceptingTerms] = useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -1658,14 +1660,57 @@ export default function MatchPage() {
       setLongerConversationRequested(false);
       setLongerConversationRequestReceived(false);
 
-      setTimeout(() => {
-        setMatchStatus("idle");
-        isEndingCallRef.current = false; // Reset flag after transition
-      }, 2000);
+      // Show feedback modal when session ends
+      setShowFeedbackModal(true);
     } catch (error) {
       console.error("Error ending call:", error);
       isEndingCallRef.current = false;
     }
+  };
+
+  const handleFeedbackSubmit = async (feedback: {
+    sessionRating: number;
+    callRating: number;
+    improvements: string;
+  }) => {
+    try {
+      // Format feedback message
+      const feedbackMessage = `Session Feedback:
+- Session Rating: ${feedback.sessionRating}/5
+- Call Rating: ${feedback.callRating}/5
+${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
+
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: "general",
+          message: feedbackMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit feedback");
+      }
+
+      // After feedback is submitted, transition to idle
+      setTimeout(() => {
+        setMatchStatus("idle");
+        isEndingCallRef.current = false; // Reset flag after transition
+      }, 500);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      throw error;
+    }
+  };
+
+  const handleFeedbackClose = () => {
+    setShowFeedbackModal(false);
+    // Transition to idle after closing feedback modal
+    setTimeout(() => {
+      setMatchStatus("idle");
+      isEndingCallRef.current = false; // Reset flag after transition
+    }, 500);
   };
 
   const handleSkip = async () => {
@@ -3344,6 +3389,12 @@ export default function MatchPage() {
         flaggedUserId={otherUserId || ""}
         matchId={currentMatchId || ""}
         onFlagSubmit={handleFlagSubmit}
+      />
+
+      <SessionFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={handleFeedbackClose}
+        onSubmit={handleFeedbackSubmit}
       />
 
     </div>
