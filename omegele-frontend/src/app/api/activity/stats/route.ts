@@ -9,7 +9,7 @@ export async function GET() {
     // Get all recent activities (within last 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-    let activities = [];
+    let activities: Awaited<ReturnType<typeof prisma.userActivity.findMany>> = [];
     try {
       activities = await prisma.userActivity.findMany({
         where: {
