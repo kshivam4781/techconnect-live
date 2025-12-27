@@ -1255,6 +1255,8 @@ export default function MatchPage() {
     const logVideoStates = () => {
       if (localVideoRef.current) {
         const localStream = localVideoRef.current.srcObject as MediaStream;
+        const rect = localVideoRef.current.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(localVideoRef.current);
         console.log("Local video state:", {
           hasStream: !!localStream,
           tracks: localStream ? localStream.getTracks().length : 0,
@@ -1263,10 +1265,19 @@ export default function MatchPage() {
           paused: localVideoRef.current.paused,
           readyState: localVideoRef.current.readyState,
           muted: localVideoRef.current.muted,
+          width: rect.width,
+          height: rect.height,
+          visible: rect.width > 0 && rect.height > 0,
+          display: computedStyle.display,
+          visibility: computedStyle.visibility,
+          opacity: computedStyle.opacity,
+          zIndex: computedStyle.zIndex,
         });
       }
       if (remoteVideoRef.current) {
         const remoteStream = remoteVideoRef.current.srcObject as MediaStream;
+        const rect = remoteVideoRef.current.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(remoteVideoRef.current);
         console.log("Remote video state:", {
           hasStream: !!remoteStream,
           tracks: remoteStream ? remoteStream.getTracks().length : 0,
@@ -1276,6 +1287,13 @@ export default function MatchPage() {
           readyState: remoteVideoRef.current.readyState,
           muted: remoteVideoRef.current.muted,
           volume: remoteVideoRef.current.volume,
+          width: rect.width,
+          height: rect.height,
+          visible: rect.width > 0 && rect.height > 0,
+          display: computedStyle.display,
+          visibility: computedStyle.visibility,
+          opacity: computedStyle.opacity,
+          zIndex: computedStyle.zIndex,
         });
       }
     };
@@ -2533,6 +2551,7 @@ export default function MatchPage() {
                       playsInline
                       muted={false}
                       className="h-full w-full object-cover bg-[#111827]"
+                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded (in-call)");
                         if (remoteVideoRef.current) {
@@ -2586,7 +2605,7 @@ export default function MatchPage() {
                       }}
                     />
                     {!remoteVideoRef.current?.srcObject && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10">
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10 pointer-events-none">
                         <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
                           {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                         </div>
@@ -2614,6 +2633,7 @@ export default function MatchPage() {
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    style={{ display: 'block', visibility: 'visible', opacity: 1 }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (in-call state)");
                       if (localVideoRef.current) {
