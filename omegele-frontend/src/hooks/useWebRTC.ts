@@ -227,24 +227,31 @@ export function useWebRTC({
                         remoteVideoRef.current.volume = 1.0;
                       }
                       
-                      // Force play
-                      remoteVideoRef.current.play().then(() => {
-                        console.log("Remote video playing after audio track added");
-                      }).catch((err) => {
+                  // Force play - but check if element is still in DOM
+                  if (document.contains(remoteVideoRef.current)) {
+                    remoteVideoRef.current.play().then(() => {
+                      console.log("Remote video playing after audio track added");
+                    }).catch((err) => {
+                      // Ignore AbortError as it's usually due to element being recreated
+                      if (err.name !== 'AbortError') {
                         console.error("Error playing remote video after audio track added:", err);
-                        // Retry after delay
-                        setTimeout(() => {
-                          if (remoteVideoRef.current && remoteVideoRef.current.srcObject === remoteStream) {
-                            remoteVideoRef.current.muted = false;
-                            if (remoteVideoRef.current.volume !== undefined) {
-                              remoteVideoRef.current.volume = 1.0;
-                            }
-                            remoteVideoRef.current.play().catch((retryErr) => {
-                              console.error("Error playing remote video on retry after audio track:", retryErr);
-                            });
+                      }
+                      // Retry after delay if element still exists
+                      setTimeout(() => {
+                        if (remoteVideoRef.current && remoteVideoRef.current.srcObject === remoteStream && document.contains(remoteVideoRef.current)) {
+                          remoteVideoRef.current.muted = false;
+                          if (remoteVideoRef.current.volume !== undefined) {
+                            remoteVideoRef.current.volume = 1.0;
                           }
-                        }, 200);
-                      });
+                          remoteVideoRef.current.play().catch((retryErr) => {
+                            if (retryErr.name !== 'AbortError') {
+                              console.error("Error playing remote video on retry after audio track:", retryErr);
+                            }
+                          });
+                        }
+                      }, 200);
+                    });
+                  }
                     }
                   }
                 } else {
@@ -286,20 +293,25 @@ export function useWebRTC({
                     console.log("Remote video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
                   });
                   
-                  // Force play to ensure video and audio work
+                  // Force play to ensure video and audio work - but check if element is still in DOM
                   const playRemoteVideo = async () => {
                     try {
-                      if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream) {
+                      if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream && document.contains(remoteVideoRef.current)) {
                         await remoteVideoRef.current.play();
                         console.log("Remote video playing successfully");
                       }
-                    } catch (err) {
-                      console.error("Error playing remote video:", err);
-                      // Retry after a short delay
+                    } catch (err: any) {
+                      // Ignore AbortError as it's usually due to element being recreated
+                      if (err.name !== 'AbortError') {
+                        console.error("Error playing remote video:", err);
+                      }
+                      // Retry after a short delay if element still exists
                       setTimeout(() => {
-                        if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream) {
-                          remoteVideoRef.current.play().catch((retryErr) => {
-                            console.error("Error playing remote video on retry:", retryErr);
+                        if (remoteVideoRef.current && remoteVideoRef.current.srcObject === stream && document.contains(remoteVideoRef.current)) {
+                          remoteVideoRef.current.play().catch((retryErr: any) => {
+                            if (retryErr.name !== 'AbortError') {
+                              console.error("Error playing remote video on retry:", retryErr);
+                            }
                           });
                         }
                       }, 200);
@@ -343,19 +355,27 @@ export function useWebRTC({
             
             if (state === "connected") {
               // Ensure remote video is playing when connected
-              if (remoteVideoRef.current) {
+              if (remoteVideoRef.current && document.contains(remoteVideoRef.current)) {
                 if (remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
                   remoteVideoRef.current.srcObject = remoteStreamRef.current;
+                  console.log("Restored remote stream after connection, tracks:", remoteStreamRef.current.getTracks().length);
                 }
                 remoteVideoRef.current.muted = false;
                 if (remoteVideoRef.current.volume !== undefined) {
                   remoteVideoRef.current.volume = 1.0;
                 }
-                remoteVideoRef.current.play().then(() => {
-                  console.log("Remote video playing after connection");
-                }).catch((err) => {
-                  console.error("Error playing remote video after connection:", err);
-                });
+                // Small delay to ensure element is ready
+                setTimeout(() => {
+                  if (remoteVideoRef.current && document.contains(remoteVideoRef.current)) {
+                    remoteVideoRef.current.play().then(() => {
+                      console.log("Remote video playing after connection");
+                    }).catch((err: any) => {
+                      if (err.name !== 'AbortError') {
+                        console.error("Error playing remote video after connection:", err);
+                      }
+                    });
+                  }
+                }, 100);
               }
             }
           };
@@ -575,13 +595,13 @@ export function useWebRTC({
             }
           });
           
-          // Try to play if paused or not playing
-          if (remoteVideoRef.current.paused || remoteVideoRef.current.readyState < 3) {
+          // Try to play if paused or not playing - but check if element is still in DOM
+          if ((remoteVideoRef.current.paused || remoteVideoRef.current.readyState < 3) && document.contains(remoteVideoRef.current)) {
             remoteVideoRef.current.play().then(() => {
               console.log("Remote video playing after restoration, audio tracks:", audioTracks.length);
               // Double-check audio after play
               setTimeout(() => {
-                if (remoteVideoRef.current) {
+                if (remoteVideoRef.current && document.contains(remoteVideoRef.current)) {
                   remoteVideoRef.current.muted = false;
                   if (remoteVideoRef.current.volume !== undefined) {
                     remoteVideoRef.current.volume = 1.0;
@@ -589,8 +609,11 @@ export function useWebRTC({
                   console.log("Audio check after play - muted:", remoteVideoRef.current.muted, "volume:", remoteVideoRef.current.volume);
                 }
               }, 100);
-            }).catch((err) => {
-              console.error("Error playing remote video in check:", err);
+            }).catch((err: any) => {
+              // Ignore AbortError as it's usually due to element being recreated
+              if (err.name !== 'AbortError') {
+                console.error("Error playing remote video in check:", err);
+              }
             });
           } else {
             // Even if playing, ensure audio settings are correct

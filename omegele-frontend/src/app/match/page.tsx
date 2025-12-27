@@ -1288,13 +1288,51 @@ export default function MatchPage() {
     }
   }, [matchStatus]);
 
+  // Ensure streams are restored when transitioning to in-call state
+  useEffect(() => {
+    if (matchStatus === "in-call") {
+      // Small delay to ensure video elements are rendered
+      const restoreStreams = setTimeout(() => {
+        // Restore local video stream
+        if (localVideoRef.current) {
+          // Check if element has stream, if not, get from useWebRTC's internal ref
+          // The useWebRTC hook should handle this, but we ensure it here as backup
+          const hasStream = localVideoRef.current.srcObject;
+          if (!hasStream) {
+            console.log("Local video element missing stream in in-call, will be restored by useWebRTC");
+          } else {
+            const stream = localVideoRef.current.srcObject as MediaStream;
+            if (stream && stream.getTracks().length > 0) {
+              // Ensure it's playing
+              if (localVideoRef.current.paused) {
+                localVideoRef.current.play().catch((err) => {
+                  console.error("Error playing local video after in-call transition:", err);
+                });
+              }
+            }
+          }
+        }
+        
+        // Restore remote video stream - useWebRTC hook should handle this via remoteStreamRef
+        if (remoteVideoRef.current) {
+          const hasStream = remoteVideoRef.current.srcObject;
+          if (!hasStream) {
+            console.log("Remote video element missing stream in in-call, will be restored by useWebRTC");
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(restoreStreams);
+    }
+  }, [matchStatus]);
+
   // Ensure remote video is properly displayed when in-call
   useEffect(() => {
-    if (matchStatus === "in-call" && remoteVideoRef.current) {
+    if (matchStatus === "in-call") {
       const checkAndSetupRemoteVideo = () => {
         if (remoteVideoRef.current) {
           const stream = remoteVideoRef.current.srcObject as MediaStream;
-          if (stream) {
+          if (stream && stream.getTracks().length > 0) {
             // Ensure all tracks are enabled
             stream.getTracks().forEach((track) => {
               if (!track.enabled) {
@@ -1309,12 +1347,15 @@ export default function MatchPage() {
               remoteVideoRef.current.volume = 1.0;
             }
             
-            // Try to play if not already playing
-            if (remoteVideoRef.current.paused) {
+            // Try to play if not already playing - but check if element is still in DOM
+            if (remoteVideoRef.current.paused && document.contains(remoteVideoRef.current)) {
               remoteVideoRef.current.play().then(() => {
                 console.log("Remote video playing in in-call effect");
               }).catch((err) => {
-                console.error("Error playing remote video in in-call effect:", err);
+                // Ignore AbortError as it's usually due to element being recreated
+                if (err.name !== 'AbortError') {
+                  console.error("Error playing remote video in in-call effect:", err);
+                }
               });
             }
           } else {
