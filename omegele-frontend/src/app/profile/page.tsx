@@ -296,14 +296,14 @@ export default function ProfilePage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,212,71,0.1),transparent_50%)]" />
         </div>
         <div className="relative mx-auto max-w-4xl text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-[#3b435a] bg-[#131827] px-4 py-2 text-sm font-medium text-[#d3dcec] shadow-sm backdrop-blur mb-6">
+          <p className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/80 px-4 py-2 text-sm font-medium text-white shadow-sm backdrop-blur mb-6">
             <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
             Profile & Settings
           </p>
-          <h1 className="text-4xl font-bold tracking-tight text-[#f8f3e8] sm:text-5xl md:text-6xl mb-6">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl mb-6">
             Manage Your Profile
           </h1>
-          <p className="max-w-2xl mx-auto text-lg text-[#d3dcec] leading-relaxed">
+          <p className="max-w-2xl mx-auto text-lg text-slate-200 leading-relaxed">
             Customize your preferences, topics, and conversation settings to get better matches.
           </p>
         </div>
@@ -548,50 +548,83 @@ export default function ProfilePage() {
           {/* Preferences */}
           <div className="space-y-6">
             {/* Topics */}
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Topics you care about</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-base font-semibold text-slate-900">Topics you care about</p>
+                  <p className="text-sm text-slate-600 mt-1">
                     Select topics to help us match you with relevant conversations.
                   </p>
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   {topics.length} selected
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 pt-1 max-h-64 overflow-y-auto">
-                {TOPIC_OPTIONS.map((topic) => {
-                  const active = topics.includes(topic.label);
-                  return (
-                    <button
-                      key={topic.label}
-                      type="button"
-                      onClick={() => toggleTopic(topic.label)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
-                        active
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : topic.trending
-                          ? "border-[#ffd447] bg-[#ffd447]/10 text-slate-700 hover:border-[#facc15]"
-                          : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-                      }`}
-                    >
-                      {topic.trending && (
-                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#ffd447]" />
-                      )}
-                      {topic.label}
-                    </button>
-                  );
-                })}
+              
+              {/* Trending Topics Subsection */}
+              <div className="space-y-3 pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#ffd447]" />
+                  <p className="text-xs font-medium text-slate-700">
+                    Trending now
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {TOPIC_OPTIONS.filter((topic) => topic.trending).map((topic) => {
+                    const active = topics.includes(topic.label);
+                    return (
+                      <button
+                        key={topic.label}
+                        type="button"
+                        onClick={() => toggleTopic(topic.label)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                          active
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : "border-[#ffd447] bg-[#ffd447]/10 text-slate-700 hover:border-[#facc15] hover:bg-[#ffd447]/20"
+                        }`}
+                      >
+                        {topic.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* All Topics */}
+              <div className="space-y-3 pt-2 border-t border-slate-200">
+                <p className="text-xs font-medium text-slate-700">
+                  All topics
+                </p>
+                <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
+                  {TOPIC_OPTIONS.filter((topic) => !topic.trending).map((topic) => {
+                    const active = topics.includes(topic.label);
+                    return (
+                      <button
+                        key={topic.label}
+                        type="button"
+                        onClick={() => toggleTopic(topic.label)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                          active
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                        }`}
+                      >
+                        {topic.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </section>
 
             {/* Seniority */}
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Your current level</p>
-              <p className="text-xs text-slate-600">
-                This helps us match you with people at a similar stage.
-              </p>
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+              <div>
+                <p className="text-base font-semibold text-slate-900">Your current level</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  This helps us match you with people at a similar stage.
+                </p>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {SENIORITY_OPTIONS.map((option) => {
                   const active = seniority === option.value;
@@ -606,7 +639,7 @@ export default function ProfilePage() {
                           : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
-                      <span className="font-medium text-[12px]">
+                      <span className="font-medium text-sm">
                         {option.label}
                       </span>
                     </button>
@@ -616,11 +649,13 @@ export default function ProfilePage() {
             </section>
 
             {/* Goals */}
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">What do you hope to get out of this?</p>
-              <p className="text-xs text-slate-600">
-                Optional, but it helps us understand your goals and find better matches.
-              </p>
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+              <div>
+                <p className="text-base font-semibold text-slate-900">What do you hope to get out of this?</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  Optional, but it helps us understand your goals and find better matches.
+                </p>
+              </div>
               <textarea
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
@@ -633,8 +668,8 @@ export default function ProfilePage() {
             {/* Conversation Configuration */}
             <section className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Conversation Settings</p>
-                <p className="text-xs text-slate-600">
+                <p className="text-base font-semibold text-slate-900">Conversation Settings</p>
+                <p className="text-sm text-slate-600 mt-1">
                   Configure how your initial conversations work.
                 </p>
               </div>
