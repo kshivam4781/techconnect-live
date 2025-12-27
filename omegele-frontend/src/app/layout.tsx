@@ -42,26 +42,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ colorScheme: 'light' }}>
+    <html lang="en" style={{ colorScheme: "light" }}>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (document.documentElement) {
-                const meta = document.createElement('meta');
-                meta.name = 'color-scheme';
-                meta.content = 'light';
-                document.head.appendChild(meta);
-                const themeMeta = document.createElement('meta');
-                themeMeta.name = 'theme-color';
-                themeMeta.content = '#ffffff';
-                document.head.appendChild(themeMeta);
-              }
-            `,
-          }}
-        />
         <GoogleAnalytics />
         <Providers>
         <div className="flex min-h-screen flex-col bg-gradient-to-b from-white via-gray-200 via-gray-400 via-gray-600 via-gray-800 to-[#050710]">

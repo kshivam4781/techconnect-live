@@ -601,7 +601,7 @@ export default function Home() {
               <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
               Built for people who actually ship things
             </p>
-            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl min-h-[180px] sm:min-h-[200px] md:min-h-[220px]">
+            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl min-h-[180px] sm:min-h-[200px] md:min-h-[220px] text-white">
               <span className="inline-block">
                 Find the{" "}
                 <span 
