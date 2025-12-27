@@ -800,6 +800,29 @@ export default function Home() {
               Three simple steps to start meaningful conversations
             </p>
           </div>
+          
+          {/* Tutorial Video */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-4xl">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+                <video
+                  className="relative w-full h-auto"
+                  src="/tutorial.webm"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster=""
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <p className="mt-4 text-center text-sm text-slate-500">
+                Watch this quick tutorial to see how TechConnect Live works
+              </p>
+            </div>
+          </div>
+
           <div className="grid gap-8 sm:grid-cols-3">
             <div className="group relative space-y-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-8 shadow-sm transition-all hover:shadow-lg">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ffd447] text-2xl font-bold text-slate-900">
