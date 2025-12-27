@@ -1301,6 +1301,21 @@ export default function MatchPage() {
       // Set the stream to video element
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        // Ensure video plays
+        try {
+          await localVideoRef.current.play();
+          console.log("Local video playing after permission granted");
+        } catch (playError) {
+          console.error("Error playing local video after permission:", playError);
+          // Retry after a short delay
+          setTimeout(() => {
+            if (localVideoRef.current && localVideoRef.current.srcObject === stream) {
+              localVideoRef.current.play().catch((err) => {
+                console.error("Error playing local video on retry:", err);
+              });
+            }
+          }, 100);
+        }
       }
       
       setHasPermission(true);
@@ -2110,6 +2125,22 @@ export default function MatchPage() {
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    onLoadedMetadata={() => {
+                      console.log("Local video metadata loaded (ready state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on metadata (ready):", err);
+                        });
+                      }
+                    }}
+                    onCanPlay={() => {
+                      console.log("Local video can play (ready state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on canplay (ready):", err);
+                        });
+                      }
+                    }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
@@ -2225,6 +2256,22 @@ export default function MatchPage() {
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    onLoadedMetadata={() => {
+                      console.log("Local video metadata loaded (matched/searching state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on metadata (matched/searching):", err);
+                        });
+                      }
+                    }}
+                    onCanPlay={() => {
+                      console.log("Local video can play (matched/searching state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on canplay (matched/searching):", err);
+                        });
+                      }
+                    }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">
@@ -2416,6 +2463,22 @@ export default function MatchPage() {
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    onLoadedMetadata={() => {
+                      console.log("Local video metadata loaded (in-call state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on metadata (in-call):", err);
+                        });
+                      }
+                    }}
+                    onCanPlay={() => {
+                      console.log("Local video can play (in-call state)");
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch((err) => {
+                          console.error("Error playing local video on canplay (in-call):", err);
+                        });
+                      }
+                    }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-[#111827]">

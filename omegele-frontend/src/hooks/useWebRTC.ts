@@ -174,6 +174,24 @@ export function useWebRTC({
                 if (!existingTrack) {
                   remoteStream.addTrack(track);
                   console.log("Added track to remote stream:", track.kind, track.label, "total tracks:", remoteStream.getTracks().length);
+                  
+                  // Ensure track is enabled
+                  if (!track.enabled) {
+                    track.enabled = true;
+                    console.log("Enabled newly added remote track:", track.kind, track.label);
+                  }
+                  
+                  // If this is an audio track, ensure it's playing
+                  if (track.kind === "audio" && remoteVideoRef.current && remoteVideoRef.current.srcObject === remoteStream) {
+                    console.log("Audio track added, ensuring remote video plays");
+                    remoteVideoRef.current.muted = false;
+                    if (remoteVideoRef.current.volume !== undefined) {
+                      remoteVideoRef.current.volume = 1.0;
+                    }
+                    remoteVideoRef.current.play().catch((err) => {
+                      console.error("Error playing remote video after audio track added:", err);
+                    });
+                  }
                 } else {
                   console.log("Track already in remote stream:", track.kind, track.label);
                 }
