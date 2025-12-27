@@ -993,17 +993,28 @@ export default function Home() {
           <div className="flex-1 space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Early access
+                {session ? "Get Started" : "Early access"}
               </p>
               <p className="mt-2 text-xl font-semibold text-slate-900">
-                Want to be one of the first to try it?
+                {session ? "Ready to start a conversation?" : "Want to be one of the first to try it?"}
               </p>
             </div>
             <p className="text-base leading-relaxed text-slate-600">
-              Sign in with your LinkedIn or GitHub account to get started.
+              {session 
+                ? "Click below to start matching with other tech professionals and begin meaningful conversations."
+                : "Sign in with your LinkedIn or GitHub account to get started."}
             </p>
             <div className="mt-6">
-              <LoginDropdown variant="faq" />
+              {session ? (
+                <a
+                  href="/match"
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#ffd447] px-6 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#facc15] hover:shadow-md"
+                >
+                  Start Conversation
+                </a>
+              ) : (
+                <LoginDropdown variant="faq" />
+              )}
             </div>
           </div>
         </div>
