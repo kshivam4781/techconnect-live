@@ -699,21 +699,19 @@ export default function Home() {
                   registered users
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
-                <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
-                  {stats ? (
+              {stats && stats.totalActive > 0 && (
+                <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
+                  <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
                     <>
                       {stats.totalActive}
                       <span className="ml-2 inline-flex h-2 w-2 animate-pulse rounded-full bg-[#bef264]" />
                     </>
-                  ) : (
-                    "—"
-                  )}
-                </p>
-                <p className="mt-1 text-xs sm:text-sm text-[#9aa2c2]">
-                  users active now
-                </p>
-              </div>
+                  </p>
+                  <p className="mt-1 text-xs sm:text-sm text-[#9aa2c2]">
+                    users active now
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

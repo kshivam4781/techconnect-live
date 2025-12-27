@@ -12,16 +12,35 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* Force light mode - prevent dark mode from affecting colors and fonts */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff !important;
+    --foreground: #171717 !important;
   }
+  
+  html {
+    background-color: #ffffff !important;
+    color: #171717 !important;
+  }
+  
+  body {
+    background-color: #ffffff !important;
+    color: #171717 !important;
+  }
+}
+
+html {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #171717;
 }
 
 body {
   background: var(--background);
+  background-color: #ffffff;
   color: var(--foreground);
+  color: #171717;
   font-family: Arial, Helvetica, sans-serif;
 }
 
