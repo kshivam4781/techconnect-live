@@ -252,27 +252,34 @@ export default function ProfilePage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center">
-        <p className="text-sm text-[#9aa2c2]">Loading your profile…</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-sm text-slate-600">Loading your profile…</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#050710] text-[#f8f3e8] flex items-center justify-center px-4">
-        <div className="max-w-md space-y-4 rounded-2xl border border-[#272f45] bg-[#0b1018] p-6 text-center">
-          <h1 className="text-xl font-semibold">Sign in to manage your profile</h1>
-          <p className="text-sm text-[#9aa2c2]">
-            TechConnect Live uses GitHub to verify you&apos;re a real person.
-            Sign in to view and manage your profile settings.
-          </p>
-          <button
-            onClick={() => signIn("github")}
-            className="inline-flex h-10 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] hover:shadow-[0_0_30px_rgba(250,204,21,0.7)]"
-          >
-            Continue with GitHub
-          </button>
+      <div className="min-h-screen bg-white">
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-8 text-center space-y-6 shadow-sm">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#ffd447]/10 border border-[#ffd447]">
+              <svg className="h-8 w-8 text-[#ffd447]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold text-slate-900">Sign in to manage your profile</h1>
+            <p className="text-sm text-slate-600">
+              Vinamah uses GitHub to verify you&apos;re a real person.
+              Sign in to view and manage your profile settings.
+            </p>
+            <button
+              onClick={() => signIn("github")}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-6 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-[#facc15]"
+            >
+              Continue with GitHub
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -281,68 +288,80 @@ export default function ProfilePage() {
   const sessionUser = session.user;
 
   return (
-    <div className="min-h-screen bg-[#050710] text-[#f8f3e8] px-4 py-10">
-      <div className="mx-auto flex max-w-4xl flex-col gap-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-20">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(190,242,100,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,212,71,0.1),transparent_50%)]" />
+        </div>
+        <div className="relative mx-auto max-w-4xl text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[#3b435a] bg-[#131827] px-4 py-2 text-sm font-medium text-[#d3dcec] shadow-sm backdrop-blur mb-6">
+            <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#bef264]" />
             Profile & Settings
+          </p>
+          <h1 className="text-4xl font-bold tracking-tight text-[#f8f3e8] sm:text-5xl md:text-6xl mb-6">
+            Manage Your Profile
           </h1>
-          <p className="mt-2 text-sm text-[#9aa2c2]">
-            Manage your profile information, preferences, and account settings.
+          <p className="max-w-2xl mx-auto text-lg text-[#d3dcec] leading-relaxed">
+            Customize your preferences, topics, and conversation settings to get better matches.
           </p>
         </div>
+      </section>
 
+      {/* Main Content */}
+      <main className="mx-auto max-w-6xl px-4 py-16">
         {/* Overview Section */}
-        <div className="rounded-2xl border border-[#272f45] bg-gradient-to-br from-[#0b1018] to-[#050816] p-6">
+        <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 mb-8 shadow-sm">
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Your Profile Overview
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
                 Conversation Duration
               </p>
-              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+              <p className="mt-1 text-lg font-semibold text-slate-900">
                 {initialConversationDuration}s
               </p>
-              <p className="mt-0.5 text-[10px] text-[#64748b]">
+              <p className="mt-0.5 text-[10px] text-slate-400">
                 Max: 60 seconds
               </p>
             </div>
-            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
                 Name Visibility
               </p>
-              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+              <p className="mt-1 text-lg font-semibold text-slate-900">
                 {showName ? "Visible" : "Hidden"}
               </p>
-              <p className="mt-0.5 text-[10px] text-[#64748b]">
+              <p className="mt-0.5 text-[10px] text-slate-400">
                 {showName ? "Others can see your name" : "Name is hidden"}
               </p>
             </div>
-            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
                 Selected Topics
               </p>
-              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+              <p className="mt-1 text-lg font-semibold text-slate-900">
                 {topics.length}
               </p>
-              <p className="mt-0.5 text-[10px] text-[#64748b]">
+              <p className="mt-0.5 text-[10px] text-slate-400">
                 {topics.length > 0 ? "Topics selected" : "No topics selected"}
               </p>
             </div>
-            <div className="rounded-xl border border-[#343d55] bg-[#050816]/50 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-[#9aa2c2]">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">
                 Seniority Level
               </p>
-              <p className="mt-1 text-lg font-semibold text-[#f8f3e8]">
+              <p className="mt-1 text-lg font-semibold text-slate-900">
                 {seniority
                   ? SENIORITY_OPTIONS.find((s) => s.value === seniority)?.label.split(" / ")[0] || "Not set"
                   : "Not set"}
               </p>
-              <p className="mt-0.5 text-[10px] text-[#64748b]">
+              <p className="mt-0.5 text-[10px] text-slate-400">
                 {seniority ? "Level configured" : "Configure below"}
               </p>
             </div>
@@ -351,9 +370,9 @@ export default function ProfilePage() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(0,1.2fr)]">
           {/* Account Info */}
-          <div className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#9aa2c2] mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
                 Account Information
               </p>
               <div className="flex items-center gap-4">
@@ -362,10 +381,10 @@ export default function ProfilePage() {
                   <img
                     src={sessionUser.image}
                     alt={sessionUser.name ?? "Avatar"}
-                    className="h-12 w-12 rounded-full border border-[#343d55] object-cover"
+                    className="h-12 w-12 rounded-full border border-slate-300 object-cover"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#343d55] bg-[#111827] text-sm font-semibold">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-sm font-semibold text-slate-700">
                     {(sessionUser?.name || sessionUser?.email || "?")
                       .toString()
                       .charAt(0)
@@ -373,43 +392,43 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold">
+                  <p className="text-sm font-semibold text-slate-900">
                     {sessionUser?.name || "GitHub user"}
                   </p>
                   {sessionUser?.email && (
-                    <p className="text-xs text-[#9aa2c2]">{sessionUser.email}</p>
+                    <p className="text-xs text-slate-600">{sessionUser.email}</p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2 text-xs text-[#c5cbe6]">
-              <p className="font-medium text-[#f8f3e8]">Sign-in details</p>
+            <div className="space-y-2 text-xs text-slate-600">
+              <p className="font-medium text-slate-900">Sign-in details</p>
               <p>
                 Provider: <span className="font-semibold">GitHub</span>
               </p>
               <p>
                 Status:{" "}
-                <span className="font-semibold text-[#bef264]">Verified</span>
+                <span className="font-semibold text-green-600">Verified</span>
               </p>
             </div>
 
             {/* Terms and Conditions Section */}
-            <div className="mt-4 pt-4 border-t border-[#272f45]">
-              <p className="text-xs font-medium text-[#f8f3e8] mb-3">Legal Agreements</p>
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <p className="text-xs font-medium text-slate-900 mb-3">Legal Agreements</p>
               {user?.termsAcceptedAt ? (
-                <div className="space-y-2 rounded-xl border border-[#bef264]/30 bg-[#1a2b16]/30 p-3">
+                <div className="space-y-2 rounded-xl border border-green-200 bg-green-50 p-4">
                   <div className="flex items-start gap-2">
-                    <svg className="h-4 w-4 text-[#bef264] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-[#bef264] mb-1">
+                      <p className="text-xs font-semibold text-green-700 mb-1">
                         Terms and Conditions Accepted
                       </p>
-                      <p className="text-[11px] text-[#c5cbe6] mb-2">
+                      <p className="text-[11px] text-slate-600 mb-2">
                         Accepted on:{" "}
-                        <span className="font-semibold text-[#f8f3e8]">
+                        <span className="font-semibold text-slate-900">
                           {new Date(user.termsAcceptedAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -417,7 +436,7 @@ export default function ProfilePage() {
                           })}
                         </span>
                         {" at "}
-                        <span className="font-semibold text-[#f8f3e8]">
+                        <span className="font-semibold text-slate-900">
                           {new Date(user.termsAcceptedAt).toLocaleTimeString('en-US', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -426,7 +445,7 @@ export default function ProfilePage() {
                           })}
                         </span>
                       </p>
-                      <p className="text-[10px] text-[#9aa2c2] mb-2">
+                      <p className="text-[10px] text-slate-500 mb-2">
                         You have accepted our Terms & Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy.
                       </p>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -438,7 +457,7 @@ export default function ProfilePage() {
                         >
                           Terms & Conditions
                         </a>
-                        <span className="text-[#64748b]">•</span>
+                        <span className="text-slate-400">•</span>
                         <a
                           href="/privacy"
                           target="_blank"
@@ -447,7 +466,7 @@ export default function ProfilePage() {
                         >
                           Privacy Policy
                         </a>
-                        <span className="text-[#64748b]">•</span>
+                        <span className="text-slate-400">•</span>
                         <a
                           href="/acceptable-use"
                           target="_blank"
@@ -456,7 +475,7 @@ export default function ProfilePage() {
                         >
                           Acceptable Use
                         </a>
-                        <span className="text-[#64748b]">•</span>
+                        <span className="text-slate-400">•</span>
                         <a
                           href="/cookies"
                           target="_blank"
@@ -470,27 +489,27 @@ export default function ProfilePage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                <div className="space-y-3 rounded-xl border border-red-300 bg-red-50 p-4">
                   <div className="flex items-start gap-2">
-                    <svg className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-red-400 mb-1">
+                      <p className="text-xs font-semibold text-red-700 mb-1">
                         Terms and Conditions Not Accepted
                       </p>
-                      <p className="text-[11px] text-red-300/90 mb-3">
+                      <p className="text-[11px] text-red-600 mb-3">
                         You must accept our Terms and Conditions, Privacy Policy, Acceptable Use Policy, and Cookie Policy to use this service.
                       </p>
                       <div className="space-y-2">
                         <button
                           onClick={handleAcceptTerms}
                           disabled={isAcceptingTerms}
-                          className="w-full inline-flex items-center justify-center rounded-full bg-[#ffd447] px-4 py-2 text-xs font-semibold text-[#18120b] shadow-[0_0_22px_rgba(250,204,21,0.45)] transition active:-translate-y-0.5 active:bg-[#facc15] active:shadow-[0_0_30px_rgba(250,204,21,0.7)] disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full inline-flex items-center justify-center rounded-full bg-[#ffd447] px-4 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isAcceptingTerms ? "Accepting..." : "Accept Terms and Conditions"}
                         </button>
-                        <p className="text-[10px] text-[#9aa2c2] text-center">
+                        <p className="text-[10px] text-slate-500 text-center">
                           By accepting, you agree to our{" "}
                           <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#ffd447] hover:underline">
                             Terms and Conditions
@@ -516,10 +535,10 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="pt-4 border-t border-[#343d55]">
+            <div className="pt-4 border-t border-slate-200">
               <button
                 onClick={() => signOut()}
-                className="inline-flex h-9 items-center justify-center rounded-full border border-[#3b435a] bg-[#0f1729] px-4 text-xs font-medium text-[#f8f3e8] shadow-sm transition hover:-translate-y-0.5 hover:border-[#6471a3] hover:bg-[#151f35]"
+                className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
               >
                 Sign out
               </button>
@@ -529,15 +548,15 @@ export default function ProfilePage() {
           {/* Preferences */}
           <div className="space-y-6">
             {/* Topics */}
-            <section className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
+            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium">Topics you care about</p>
-                  <p className="text-xs text-[#9aa2c2]">
+                  <p className="text-sm font-semibold text-slate-900">Topics you care about</p>
+                  <p className="text-xs text-slate-600">
                     Select topics to help us match you with relevant conversations.
                   </p>
                 </div>
-                <p className="text-[11px] text-[#64748b]">
+                <p className="text-[11px] text-slate-500">
                   {topics.length} selected
                 </p>
               </div>
@@ -549,12 +568,12 @@ export default function ProfilePage() {
                       key={topic.label}
                       type="button"
                       onClick={() => toggleTopic(topic.label)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
                         active
-                          ? "border-[#bef264] bg-[#1a2b16] text-[#e4ffb5]"
+                          ? "border-green-500 bg-green-50 text-green-700"
                           : topic.trending
-                          ? "border-[#ffd447] bg-[#18120b] text-[#fef9c3] hover:border-[#facc15]"
-                          : "border-[#3b435a] bg-[#050816] text-[#d3dcec] hover:border-[#6471a3]"
+                          ? "border-[#ffd447] bg-[#ffd447]/10 text-slate-700 hover:border-[#facc15]"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       {topic.trending && (
@@ -568,9 +587,9 @@ export default function ProfilePage() {
             </section>
 
             {/* Seniority */}
-            <section className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
-              <p className="text-sm font-medium">Your current level</p>
-              <p className="text-xs text-[#9aa2c2]">
+            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Your current level</p>
+              <p className="text-xs text-slate-600">
                 This helps us match you with people at a similar stage.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -581,10 +600,10 @@ export default function ProfilePage() {
                       key={option.value}
                       type="button"
                       onClick={() => setSeniority(option.value)}
-                      className={`flex flex-col items-start rounded-2xl border px-3 py-2 text-left text-xs transition ${
+                      className={`flex flex-col items-start rounded-xl border px-3 py-2.5 text-left text-xs transition ${
                         active
-                          ? "border-[#ffd447] bg-[#18120b] text-[#fef9c3]"
-                          : "border-[#3b435a] bg-[#050816] text-[#d3dcec] hover:border-[#6471a3]"
+                          ? "border-[#ffd447] bg-[#ffd447] text-slate-900 shadow-sm"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       <span className="font-medium text-[12px]">
@@ -597,25 +616,25 @@ export default function ProfilePage() {
             </section>
 
             {/* Goals */}
-            <section className="space-y-3 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
-              <p className="text-sm font-medium">What do you hope to get out of this?</p>
-              <p className="text-xs text-[#9aa2c2]">
+            <section className="space-y-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">What do you hope to get out of this?</p>
+              <p className="text-xs text-slate-600">
                 Optional, but it helps us understand your goals and find better matches.
               </p>
               <textarea
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
                 rows={4}
-                className="w-full resize-none rounded-md border border-[#3b435a] bg-[#050816] px-3 py-2 text-xs text-[#e5e7eb] outline-none focus:border-[#ffd447]"
+                className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#ffd447] focus:ring-2 focus:ring-[#ffd447] focus:ring-offset-0"
                 placeholder='e.g. "Mock interviews for backend roles", "Honest feedback on startup ideas", "Chat with other self-taught devs"'
               />
             </section>
 
             {/* Conversation Configuration */}
-            <section className="space-y-4 rounded-2xl border border-[#272f45] bg-[#0b1018] p-5">
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-sm">
               <div>
-                <p className="text-sm font-medium">Conversation Settings</p>
-                <p className="text-xs text-[#9aa2c2]">
+                <p className="text-sm font-semibold text-slate-900">Conversation Settings</p>
+                <p className="text-xs text-slate-600">
                   Configure how your initial conversations work.
                 </p>
               </div>
@@ -623,14 +642,14 @@ export default function ProfilePage() {
               {/* Initial Conversation Duration */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[#f8f3e8]">
+                  <label className="text-xs font-medium text-slate-900">
                     Initial conversation duration
                   </label>
-                  <span className="text-xs text-[#9aa2c2]">
+                  <span className="text-xs text-slate-600">
                     {initialConversationDuration} seconds
                   </span>
                 </div>
-                <p className="text-[11px] text-[#9aa2c2]">
+                <p className="text-[11px] text-slate-500">
                   How long should your initial conversation be? (60 seconds - 5 minutes)
                 </p>
                 <div className="space-y-2">
@@ -644,9 +663,9 @@ export default function ProfilePage() {
                       const value = Number(e.target.value);
                       setInitialConversationDuration(Math.max(60, Math.min(300, value)));
                     }}
-                    className="w-full h-2 bg-[#050816] rounded-lg appearance-none cursor-pointer accent-[#ffd447]"
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#ffd447]"
                   />
-                  <div className="flex justify-between text-[10px] text-[#64748b]">
+                  <div className="flex justify-between text-[10px] text-slate-400">
                     <span>60s</span>
                     <span>120s</span>
                     <span>180s</span>
@@ -657,13 +676,13 @@ export default function ProfilePage() {
               </div>
 
               {/* Show Name Toggle */}
-              <div className="space-y-2 pt-2 border-t border-[#343d55]">
+              <div className="space-y-2 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-medium text-[#f8f3e8]">
+                    <label className="text-xs font-medium text-slate-900">
                       Show your name to matched users
                     </label>
-                    <p className="text-[11px] text-[#9aa2c2] mt-1">
+                    <p className="text-[11px] text-slate-500 mt-1">
                       When enabled, your name will be visible to people you&apos;re matched with.
                     </p>
                   </div>
@@ -671,7 +690,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => setShowName(!showName)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      showName ? "bg-[#bef264]" : "bg-[#3b435a]"
+                      showName ? "bg-green-500" : "bg-slate-300"
                     }`}
                   >
                     <span
@@ -687,12 +706,12 @@ export default function ProfilePage() {
             {/* Save Button */}
             <div className="space-y-3">
               {error && (
-                <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="rounded-lg border border-[#bef264]/50 bg-[#bef264]/10 p-3 text-sm text-[#bef264]">
+                <div className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">
                   Profile updated successfully!
                 </div>
               )}
@@ -700,16 +719,14 @@ export default function ProfilePage() {
                 type="button"
                 disabled={saving}
                 onClick={handleSave}
-                className="w-full inline-flex h-10 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-[#18120b] shadow-[0_0_26px_rgba(250,204,21,0.45)] transition hover:-translate-y-0.5 hover:bg-[#facc15] disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full inline-flex h-11 items-center justify-center rounded-full bg-[#ffd447] px-5 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-[#facc15] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
-
-

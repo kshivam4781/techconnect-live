@@ -93,7 +93,7 @@ export function UserMenu() {
               <Link
                 href="/match"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#d3dcec] transition hover:bg-[#151f35] hover:text-[#f8f3e8]"
+                className="flex items-center gap-2 rounded-xl border border-[#ffd447] bg-[#ffd447]/10 px-3 py-2 text-xs font-semibold text-[#ffd447] transition hover:bg-[#ffd447]/20"
               >
                 <svg
                   className="h-4 w-4"
@@ -136,27 +136,6 @@ export function UserMenu() {
                   />
                 </svg>
                 Settings & Profile
-              </Link>
-
-              <Link
-                href="/onboarding"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#d3dcec] transition hover:bg-[#151f35] hover:text-[#f8f3e8]"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Onboarding
               </Link>
 
               <div className="my-1 border-t border-[#343d55]" />
