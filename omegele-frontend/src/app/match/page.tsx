@@ -24,7 +24,7 @@ export default function MatchPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [matchStatus, setMatchStatus] = useState<MatchStatus>("idle");
-  const [callMode, setCallMode] = useState<"VIDEO" | "AUDIO">("VIDEO");
+  const [callMode, setCallMode] = useState<"VIDEO">("VIDEO");
   const [hasPermission, setHasPermission] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [matchTimer, setMatchTimer] = useState(0);
@@ -88,8 +88,8 @@ export default function MatchPage() {
     roomId: currentRoomId,
     localVideoRef,
     remoteVideoRef,
-    enabled: (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && (callMode === "VIDEO" || callMode === "AUDIO"),
-    audioOnly: callMode === "AUDIO",
+    enabled: (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && callMode === "VIDEO",
+    audioOnly: false,
   });
 
   // Monitor peer connection state for disconnections
@@ -125,7 +125,7 @@ export default function MatchPage() {
               if (sessionId && mode) {
                 setMatchStatus("searching");
                 hasJoinedQueueRef.current = false;
-                const backendMode: "VIDEO" | "TEXT" = mode === "AUDIO" ? "VIDEO" : "VIDEO";
+                const backendMode: "VIDEO" | "TEXT" = "VIDEO";
                 
                 fetch("/api/activity/update", {
                   method: "POST",
@@ -879,7 +879,7 @@ export default function MatchPage() {
       // Socket just connected and we're searching, retry joining queue (only once)
       console.log("Socket connected while searching, retrying queue join");
       hasJoinedQueueRef.current = true;
-      const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
+      const backendMode: "VIDEO" | "TEXT" = "VIDEO";
       joinQueue(currentSessionId, backendMode);
     }
     
@@ -1124,7 +1124,7 @@ export default function MatchPage() {
           if (currentSessionId && callMode) {
             setMatchStatus("searching");
             hasJoinedQueueRef.current = false;
-            const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
+            const backendMode: "VIDEO" | "TEXT" = "VIDEO";
             
             // Update activity
             fetch("/api/activity/update", {
@@ -1286,50 +1286,29 @@ export default function MatchPage() {
     }
   }, [matchStatus]);
 
-  const handleSelectMode = async (mode: "VIDEO" | "AUDIO") => {
+  const handleSelectMode = async (mode: "VIDEO") => {
     setCallMode(mode);
     setPermissionError(null);
     
-    // For video calls, request permission first
-    if (mode === "VIDEO") {
-      setMatchStatus("permission");
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        
-        // Set the stream to video element
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-        
-        setHasPermission(true);
-        setMatchStatus("ready");
-      } catch (error: any) {
-        console.error("Error requesting permission:", error);
-        setPermissionError(error.message || "Failed to access camera/microphone");
-        setHasPermission(false);
+    // Request video and audio permission
+    setMatchStatus("permission");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      
+      // Set the stream to video element
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
       }
-    } else {
-      // For audio calls, request audio permission
-      setMatchStatus("permission");
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: false,
-          audio: true,
-        });
-        
-        setHasPermission(true);
-        setMatchStatus("ready");
-        
-        // Cleanup audio stream (we don't need to show it)
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (error: any) {
-        console.error("Error requesting permission:", error);
-        setPermissionError(error.message || "Failed to access microphone");
-        setHasPermission(false);
-      }
+      
+      setHasPermission(true);
+      setMatchStatus("ready");
+    } catch (error: any) {
+      console.error("Error requesting permission:", error);
+      setPermissionError(error.message || "Failed to access camera/microphone");
+      setHasPermission(false);
     }
   };
 
@@ -1409,8 +1388,7 @@ export default function MatchPage() {
         setLocationError("Location request failed. You can still search without location.");
       });
 
-      // Map AUDIO to VIDEO for backend compatibility (we'll handle video off in UI)
-      const backendMode: "VIDEO" | "TEXT" = callMode === "AUDIO" ? "VIDEO" : "VIDEO";
+      const backendMode: "VIDEO" | "TEXT" = "VIDEO";
 
       // Start session
       const sessionRes = await fetch("/api/session/start", {
@@ -1666,7 +1644,7 @@ export default function MatchPage() {
         if (previousSessionId && previousCallMode) {
           setMatchStatus("searching");
           hasJoinedQueueRef.current = false;
-          const backendMode: "VIDEO" | "TEXT" = previousCallMode === "AUDIO" ? "VIDEO" : "VIDEO";
+          const backendMode: "VIDEO" | "TEXT" = "VIDEO";
           
           // Update activity
           await fetch("/api/activity/update", {
@@ -2005,12 +1983,12 @@ export default function MatchPage() {
 
             <div className="space-y-3 sm:space-y-4 rounded-xl sm:rounded-2xl border border-[#272f45] bg-[#0b1018] p-4 sm:p-6">
               <div className="space-y-2 sm:space-y-3">
-                <p className="text-xs sm:text-sm font-medium text-[#f8f3e8]">Choose your mode</p>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <p className="text-xs sm:text-sm font-medium text-[#f8f3e8]">Start video call</p>
+                <div className="flex justify-center">
                   <button
                     onClick={() => handleSelectMode("VIDEO")}
                     disabled={flagStatus ? !flagStatus.canSearch : false}
-                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b] disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-xs"
                   >
                     <svg
                       className="h-7 w-7 sm:h-8 sm:w-8 text-[#ffd447]"
@@ -2027,28 +2005,6 @@ export default function MatchPage() {
                     </svg>
                     <span className="text-xs sm:text-sm font-medium">Video Call</span>
                     <span className="text-xs text-[#9aa2c2]">Face-to-face conversation</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleSelectMode("AUDIO")}
-                    disabled={flagStatus ? !flagStatus.canSearch : false}
-                    className="flex flex-col items-center gap-2 rounded-xl border border-[#3b435a] bg-[#050816] p-4 sm:p-5 transition active:border-[#ffd447] active:bg-[#18120b] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <svg
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-[#bef264]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                      />
-                    </svg>
-                    <span className="text-xs sm:text-sm font-medium">Audio Call</span>
-                    <span className="text-xs text-[#9aa2c2]">Voice-only conversation</span>
                   </button>
                 </div>
               </div>
