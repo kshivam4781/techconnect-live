@@ -1257,7 +1257,7 @@ export default function MatchPage() {
         const localStream = localVideoRef.current.srcObject as MediaStream;
         const rect = localVideoRef.current.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(localVideoRef.current);
-        console.log("Local video state:", {
+        const state = {
           hasStream: !!localStream,
           tracks: localStream ? localStream.getTracks().length : 0,
           videoTracks: localStream ? localStream.getVideoTracks().length : 0,
@@ -1272,13 +1272,17 @@ export default function MatchPage() {
           visibility: computedStyle.visibility,
           opacity: computedStyle.opacity,
           zIndex: computedStyle.zIndex,
-        });
+        };
+        console.log("Local video state:", state);
+        if (!state.visible || state.width === 0 || state.height === 0) {
+          console.warn("⚠️ LOCAL VIDEO NOT VISIBLE - width:", state.width, "height:", state.height, "display:", state.display);
+        }
       }
       if (remoteVideoRef.current) {
         const remoteStream = remoteVideoRef.current.srcObject as MediaStream;
         const rect = remoteVideoRef.current.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(remoteVideoRef.current);
-        console.log("Remote video state:", {
+        const state = {
           hasStream: !!remoteStream,
           tracks: remoteStream ? remoteStream.getTracks().length : 0,
           videoTracks: remoteStream ? remoteStream.getVideoTracks().length : 0,
@@ -1294,7 +1298,11 @@ export default function MatchPage() {
           visibility: computedStyle.visibility,
           opacity: computedStyle.opacity,
           zIndex: computedStyle.zIndex,
-        });
+        };
+        console.log("Remote video state:", state);
+        if (!state.visible || state.width === 0 || state.height === 0) {
+          console.warn("⚠️ REMOTE VIDEO NOT VISIBLE - width:", state.width, "height:", state.height, "display:", state.display);
+        }
       }
     };
     
