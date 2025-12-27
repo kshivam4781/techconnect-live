@@ -473,7 +473,7 @@ export function useWebRTC({
     const checkLocalVideo = () => {
       if (localVideoRef.current) {
         // First, check if video element already has a stream
-        let stream = localVideoRef.current.srcObject as MediaStream;
+        let stream: MediaStream | null = localVideoRef.current.srcObject as MediaStream | null;
         
         // If no stream on element, try to get from ref
         if (!stream || stream.getTracks().length === 0) {
