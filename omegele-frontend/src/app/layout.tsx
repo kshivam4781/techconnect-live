@@ -202,6 +202,13 @@ export default function RootLayout({
                   <span className="text-sm text-gray-500">
                     Built for night owls, calendar warriors, and first‑timers.
                   </span>
+                  <span className="text-sm text-gray-500">•</span>
+                  <a 
+                    href="mailto:noreply@mail.vinamah.com" 
+                    className="text-sm text-gray-600 hover:text-[#ffd447] transition-colors"
+                  >
+                    noreply@mail.vinamah.com
+                  </a>
                 </div>
               </div>
             </div>

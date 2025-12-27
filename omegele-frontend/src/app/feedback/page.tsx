@@ -132,6 +132,15 @@ export default function FeedbackPage() {
               We value your input and are constantly working to improve TechConnect Live. 
               Your feedback helps us grow and serve you better.
             </p>
+            <p className="text-xs text-[#9aa2c2] mt-2">
+              For direct inquiries, contact us at{" "}
+              <a 
+                href="mailto:noreply@mail.vinamah.com" 
+                className="text-[#ffd447] hover:underline"
+              >
+                noreply@mail.vinamah.com
+              </a>
+            </p>
           </div>
 
           {submitStatus === "success" ? (
