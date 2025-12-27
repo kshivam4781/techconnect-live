@@ -268,9 +268,6 @@ export default function MatchPage() {
     };
   }, [matchStatus]);
 
-  // Developer tools blocking disabled for debugging purposes
-  // Uncomment the code below if you want to re-enable protection features
-  /*
   // Protection: Prevent right-click context menu (except in input fields)
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -369,42 +366,6 @@ export default function MatchPage() {
         e.preventDefault();
         return false;
       }
-
-      // Disable Ctrl+U (View Source)
-      if (e.key === "U" && e.ctrlKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+S (Save Page)
-      if (e.key === "S" && e.ctrlKey && !e.shiftKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+P (Print)
-      if (e.key === "P" && e.ctrlKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+A (Select All) - but allow in input fields (handled above)
-      if (e.key === "A" && e.ctrlKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+C (Copy) - but allow in input fields (handled above)
-      if (e.key === "C" && e.ctrlKey && !e.shiftKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+X (Cut) - but allow in input fields (handled above)
-      if (e.key === "X" && e.ctrlKey) {
-        e.preventDefault();
-        return false;
-      }
     };
 
     // Detect DevTools opening (basic detection)
@@ -444,7 +405,6 @@ export default function MatchPage() {
       clearInterval(devToolsInterval);
     };
   }, []);
-  */
 
 
   // Protection: Disable text selection via CSS
