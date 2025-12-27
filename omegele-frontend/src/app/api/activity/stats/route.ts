@@ -4,18 +4,25 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     // Get total registered users count
-    const totalRegisteredUsers = await prisma.user.count();
+    const totalRegisteredUsers = await prisma.user.count().catch(() => 0);
 
     // Get all recent activities (within last 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-    const activities = await prisma.userActivity.findMany({
-      where: {
-        lastSeen: {
-          gte: fiveMinutesAgo,
+    let activities = [];
+    try {
+      activities = await prisma.userActivity.findMany({
+        where: {
+          lastSeen: {
+            gte: fiveMinutesAgo,
+          },
         },
-      },
-    });
+      });
+    } catch (activityError: any) {
+      // If the table doesn't exist or there's an error, log it but continue with empty array
+      console.warn("Error fetching user activities (table may not exist):", activityError.message);
+      activities = [];
+    }
 
     // Count by status
     const online = activities.filter((a) => a.status === "ONLINE").length;
@@ -48,13 +55,20 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("Error fetching activity stats:", error);
-    return NextResponse.json(
-      {
-        error: error.message || "Failed to fetch activity stats",
-        details: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    // Return default values instead of error to prevent UI breakage
+    return NextResponse.json({
+      totalRegisteredUsers: 0,
+      totalOnline: 0,
+      totalActive: 0,
+      online: 0,
+      searching: 0,
+      inCall: 0,
+      breakdown: {
+        video: 0,
+        text: 0,
       },
-      { status: 500 }
-    );
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 }
 
