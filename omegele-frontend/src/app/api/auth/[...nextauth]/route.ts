@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import LinkedIn from "next-auth/providers/linkedin";
 import { prisma } from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -191,6 +192,8 @@ export const authOptions = {
             }
           } else {
             // Account doesn't exist, create or find user
+            let isNewUser = false;
+            
             if (email) {
               // Try to find user by email first
               user = await prisma.user.findUnique({
@@ -210,14 +213,31 @@ export const authOptions = {
                 }
               } else {
                 // Create new user with email
+                isNewUser = true;
                 user = await prisma.user.create({
                   data: { email, name, image },
                 });
               }
             } else {
               // No email, create new user
+              isNewUser = true;
               user = await prisma.user.create({
                 data: { email: null, name, image },
+              });
+            }
+
+            // Send welcome email to new users with email (non-blocking)
+            if (isNewUser && user.email) {
+              // Extract first name from full name, or use a default
+              const firstName = name ? (name.split(" ")[0] || name) : "there";
+              
+              // Send email asynchronously - don't block authentication if it fails
+              sendWelcomeEmail({
+                email: user.email,
+                firstName,
+              }).catch((emailError) => {
+                console.error("Failed to send welcome email (non-blocking):", emailError);
+                // Don't throw - we don't want to break user registration if email fails
               });
             }
 

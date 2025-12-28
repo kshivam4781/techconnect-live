@@ -2,29 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
-import nodemailer from "nodemailer";
-
-// Create reusable transporter using environment variables
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER || "shivam@skytransportsolutions.com",
-    pass: process.env.SMTP_PASSWORD || "bzpalynezkmjlfuc",
-  },
-  tls: {
-    // Do not fail on invalid certificates
-    rejectUnauthorized: false,
-  },
-  // Connection timeout
-  connectionTimeout: 10000, // 10 seconds
-  // Socket timeout
-  socketTimeout: 10000, // 10 seconds
-  // Debug mode in development
-  debug: process.env.NODE_ENV === "development",
-  logger: process.env.NODE_ENV === "development",
-});
+import { emailTransporter } from "@/lib/email";
 
 export async function POST(request: Request) {
   let feedbackId: string | null = null;
@@ -224,42 +202,58 @@ The TechConnect Live Team
 
     const adminEmailText = fullDetails;
 
-    const fromEmail = process.env.SMTP_USER || "shivam@skytransportsolutions.com";
-    const adminEmail = process.env.ADMIN_EMAIL || "shivam@skytransportsolutions.com";
+    const fromEmail = process.env.SMTP_USER;
+    const adminEmail = process.env.ADMIN_EMAIL;
+    
+    if (!fromEmail) {
+      console.error("SMTP_USER environment variable is not set");
+      // Continue without sending email - feedback is already saved
+    }
+    
+    if (!adminEmail) {
+      console.error("ADMIN_EMAIL environment variable is not set");
+      // Continue without sending email - feedback is already saved
+    }
+
+    // Format sender name with proper display name
+    const fromName = "Shivam - Vinamah.com Founder";
+    const fromAddress = fromEmail ? `${fromName} <${fromEmail}>` : null;
 
     // Try to send emails (non-blocking - feedback is already saved)
     let emailError: string | null = null;
     let emailSent = false;
 
-    try {
-      // Verify SMTP connection first
-      await transporter.verify();
-      console.log("SMTP connection verified successfully");
+    // Only attempt to send emails if required env vars are present
+    if (fromAddress && adminEmail) {
+      try {
+        // Verify SMTP connection first
+        await emailTransporter.verify();
+        console.log("SMTP connection verified successfully");
 
-      // Send email to user
-      if (user.email) {
-        await transporter.sendMail({
-          from: fromEmail,
-          to: user.email,
-          cc: adminEmail,
-          subject: "Thank You for Your Feedback - TechConnect Live",
-          text: userEmailText,
-          html: userEmailHtml,
+        // Send email to user
+        if (user.email) {
+          await emailTransporter.sendMail({
+            from: fromAddress,
+            to: user.email,
+            cc: adminEmail,
+            subject: "Thank You for Your Feedback - TechConnect Live",
+            text: userEmailText,
+            html: userEmailHtml,
+          });
+          console.log(`Thank you email sent to user: ${user.email}`);
+        }
+
+        // Send email to admin
+        await emailTransporter.sendMail({
+          from: fromAddress,
+          to: adminEmail,
+          subject: `New Feedback: ${category.charAt(0).toUpperCase() + category.slice(1)} - TechConnect Live`,
+          text: adminEmailText,
+          html: adminEmailHtml,
         });
-        console.log(`Thank you email sent to user: ${user.email}`);
-      }
+        console.log(`Admin notification email sent to: ${adminEmail}`);
 
-      // Send email to admin
-      await transporter.sendMail({
-        from: fromEmail,
-        to: adminEmail,
-        subject: `New Feedback: ${category.charAt(0).toUpperCase() + category.slice(1)} - TechConnect Live`,
-        text: adminEmailText,
-        html: adminEmailHtml,
-      });
-      console.log(`Admin notification email sent to: ${adminEmail}`);
-
-      emailSent = true;
+        emailSent = true;
     } catch (emailErr: any) {
       emailError = emailErr.message || "Unknown email error";
       console.error("Error sending email:", emailErr);
