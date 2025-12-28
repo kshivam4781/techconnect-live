@@ -254,10 +254,11 @@ The TechConnect Live Team
         console.log(`Admin notification email sent to: ${adminEmail}`);
 
         emailSent = true;
-    } catch (emailErr: any) {
-      emailError = emailErr.message || "Unknown email error";
-      console.error("Error sending email:", emailErr);
-      // Don't fail the request - feedback is already saved
+      } catch (emailErr: any) {
+        emailError = emailErr.message || "Unknown email error";
+        console.error("Error sending email:", emailErr);
+        // Don't fail the request - feedback is already saved
+      }
     }
 
     // Update feedback record with email status
