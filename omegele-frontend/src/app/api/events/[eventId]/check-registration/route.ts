@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 // GET /api/events/[eventId]/check-registration - Check if user is registered
 export async function GET(
   request: Request,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
@@ -22,7 +23,7 @@ export async function GET(
 
     const registration = await prisma.eventRegistration.findFirst({
       where: {
-        eventId: params.eventId,
+        eventId,
         OR: [
           ...(userId ? [{ userId }] : []),
           ...(email ? [{ email }] : []),

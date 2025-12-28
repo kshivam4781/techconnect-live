@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 // POST /api/events/[eventId]/register - Register for an event
 export async function POST(
   request: Request,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const session = await getServerSession(authOptions);
     const body = await request.json();
     const { firstName, lastName, email } = body;
@@ -33,7 +34,7 @@ export async function POST(
     // Check if event exists
     const event = await prisma.event.findUnique({
       where: {
-        id: params.eventId,
+        id: eventId,
       },
     });
 
@@ -64,7 +65,7 @@ export async function POST(
     if (event.maxAttendees) {
       const registrationCount = await prisma.eventRegistration.count({
         where: {
-          eventId: params.eventId,
+          eventId,
         },
       });
 
@@ -82,7 +83,7 @@ export async function POST(
     // Check if already registered
     const existingRegistration = await prisma.eventRegistration.findFirst({
       where: {
-        eventId: params.eventId,
+        eventId,
         OR: [
           ...(userId ? [{ userId }] : []),
           { email },
@@ -100,7 +101,7 @@ export async function POST(
     // Create registration
     const registration = await prisma.eventRegistration.create({
       data: {
-        eventId: params.eventId,
+        eventId,
         userId,
         firstName,
         lastName,
