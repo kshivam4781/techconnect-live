@@ -88,6 +88,7 @@ model User {
   flagsCreated    Flag[]  @relation("FlagsCreated")    // Flags this user created
   flagsReceived   Flag[]  @relation("FlagsReceived")    // Flags against this user
   feedbacks       Feedback[]                            // Feedback submissions from this user
+  eventRegistrations EventRegistration[]                // Event registrations by this user
 }
 
 model Account {
@@ -259,5 +260,52 @@ model Feedback {
   @@index([userId, createdAt])
   @@index([category, createdAt])
   @@index([createdAt])
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  title           String
+  description     String   @db.Text
+  guestSpeaker    String   // Name of the guest speaker
+  speakerBio      String?  @db.Text // Optional bio of the speaker
+  image           String?  // URL to event image
+  eventDate       DateTime // Date and time of the event
+  location        String   // Location of the event (can be physical or virtual)
+  isVirtual       Boolean  @default(false) // Whether it's a virtual event
+  maxAttendees    Int?     // Optional max number of attendees
+  isActive        Boolean  @default(true) // Whether the event is active/visible
+  
+  // Relations
+  registrations   EventRegistration[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([eventDate])
+  @@index([isActive, eventDate])
+}
+
+model EventRegistration {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // User info (if logged in)
+  userId          String?  // User ID if logged in
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Guest info (if not logged in)
+  firstName       String
+  lastName        String
+  email           String
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([eventId, userId]) // One registration per user per event
+  @@unique([eventId, email])  // One registration per email per event
+  @@index([eventId])
+  @@index([userId])
+  @@index([email])
 }
 
