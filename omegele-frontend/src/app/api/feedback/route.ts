@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
-import { emailTransporter } from "@/lib/email";
+import { getEmailTransporter } from "@/lib/email";
 
 export async function POST(request: Request) {
   let feedbackId: string | null = null;
@@ -227,12 +227,12 @@ The TechConnect Live Team
     if (fromAddress && adminEmail) {
       try {
         // Verify SMTP connection first
-        await emailTransporter.verify();
+        await getEmailTransporter().verify();
         console.log("SMTP connection verified successfully");
 
         // Send email to user
         if (user.email) {
-          await emailTransporter.sendMail({
+          await getEmailTransporter().sendMail({
             from: fromAddress,
             to: user.email,
             cc: adminEmail,
@@ -244,7 +244,7 @@ The TechConnect Live Team
         }
 
         // Send email to admin
-        await emailTransporter.sendMail({
+        await getEmailTransporter().sendMail({
           from: fromAddress,
           to: adminEmail,
           subject: `New Feedback: ${category.charAt(0).toUpperCase() + category.slice(1)} - TechConnect Live`,

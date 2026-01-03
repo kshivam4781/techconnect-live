@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn, useSession, signOut } from "next-auth/react";
 import Snowfall from "react-snowfall";
 import { PeopleYouMayKnow } from "@/components/PeopleYouMayKnow";
+import { InaugurationOverlay } from "@/components/InaugurationOverlay";
 
 // Login Dropdown Component
 function LoginDropdown({ variant = "hero" }: { variant?: "hero" | "faq" }) {
@@ -164,6 +165,11 @@ export default function Home() {
     totalActive: number;
     totalOnline: number;
   } | null>(null);
+  
+  // Inauguration state
+  const [showInauguration, setShowInauguration] = useState(false);
+  const [checkingInauguration, setCheckingInauguration] = useState(true);
+  const INAUGURATION_KEY = "SURETrust2026";
   
   // Matching scenarios for hero section
   const matchingScenarios = [
@@ -425,6 +431,142 @@ export default function Home() {
   const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0);
   const [isTaglineTransitioning, setIsTaglineTransitioning] = useState(false);
 
+  // Check inauguration status (after NextAuth initializes)
+  // This runs only once after NextAuth is fully loaded to avoid interfering with session fetch
+  useEffect(() => {
+    // Wait for NextAuth to finish loading completely
+    if (status === "loading") {
+      return;
+    }
+
+    // Additional wait to ensure NextAuth's internal requests are complete
+    const checkInauguration = async () => {
+      // Only check if we're in the browser
+      if (typeof window === "undefined") {
+        setCheckingInauguration(false);
+        return;
+      }
+
+      // Get inauguration key from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const inaugurationKey = urlParams.get("inauguration");
+      
+      // If no key in URL, no inauguration mode
+      if (!inaugurationKey) {
+        setCheckingInauguration(false);
+        return;
+      }
+
+      // Check if key matches
+      if (inaugurationKey !== INAUGURATION_KEY) {
+        // Invalid key - just hide inauguration, don't redirect (avoids NextAuth conflicts)
+        setCheckingInauguration(false);
+        return;
+      }
+
+      // Valid key - check if inauguration is already completed
+      // Use a longer delay to ensure NextAuth session fetch is completely done
+      try {
+        // Wait even longer to ensure NextAuth is completely done with all requests
+        // Also wait for any pending network requests to complete
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Use AbortController to cancel if component unmounts
+        const controller = new AbortController();
+        
+        const res = await fetch(`/api/inauguration?key=${INAUGURATION_KEY}`, {
+          signal: controller.signal,
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).catch((err) => {
+          // Silently handle fetch errors to avoid interfering with NextAuth
+          if (err.name !== 'AbortError') {
+            // Only log in development
+            if (process.env.NODE_ENV === 'development') {
+              console.error("Failed to check inauguration status:", err);
+            }
+          }
+          return null;
+        });
+
+        if (!res || !res.ok) {
+          setCheckingInauguration(false);
+          return;
+        }
+
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          setCheckingInauguration(false);
+          return;
+        }
+
+        const data = await res.json();
+        
+        // If already completed, just hide inauguration (redirect will happen on next navigation)
+        if (data.isCompleted) {
+          setCheckingInauguration(false);
+          // Clean URL without redirecting (avoids NextAuth conflicts)
+          if (typeof window !== "undefined" && window.history) {
+            window.history.replaceState({}, "", "/");
+          }
+          return;
+        }
+
+        // Valid key and not completed - show inauguration overlay
+        setShowInauguration(true);
+        setCheckingInauguration(false);
+      } catch (error) {
+        // Silently handle errors to avoid interfering with NextAuth
+        if ((error as any)?.name !== 'AbortError') {
+          // Only log in development
+          if (process.env.NODE_ENV === 'development') {
+            console.error("Error checking inauguration:", error);
+          }
+        }
+        setCheckingInauguration(false);
+      }
+    };
+
+    // Wait 4 seconds after NextAuth loads to ensure all internal requests complete
+    // This gives NextAuth plenty of time to finish its session fetch
+    const timer = setTimeout(() => {
+      checkInauguration();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  // Handle inauguration launch
+  const handleInaugurationLaunch = async () => {
+    try {
+      // Mark inauguration as completed
+      const res = await fetch("/api/inauguration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          key: INAUGURATION_KEY,
+          action: "complete",
+        }),
+      });
+
+      if (res.ok) {
+        // Redirect to regular homepage using window.location to avoid NextAuth conflicts
+        window.location.href = "/";
+      } else {
+        // Still redirect even if API call fails
+        window.location.href = "/";
+      }
+    } catch (error) {
+      console.error("Error completing inauguration:", error);
+      // Still redirect even if API call fails
+      window.location.href = "/";
+    }
+  };
+
   // Fetch user statistics
   useEffect(() => {
     const fetchStats = async () => {
@@ -542,6 +684,27 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [heroTaglines.length]);
+
+  // Show loading state while checking inauguration
+  if (checkingInauguration) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#ffd447] border-r-transparent"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show inauguration overlay if key is valid and not completed
+  if (showInauguration) {
+    return (
+      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'fixed', top: 0, left: 0, margin: 0, padding: 0 }}>
+        <InaugurationOverlay onLaunch={handleInaugurationLaunch} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

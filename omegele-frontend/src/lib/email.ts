@@ -35,9 +35,17 @@ function getEmailConfig() {
   };
 }
 
-// Create reusable transporter using environment variables
-// This will throw an error if required env vars are missing
-export const emailTransporter = nodemailer.createTransport(getEmailConfig());
+// Lazy-load transporter to avoid errors when email isn't needed
+let emailTransporter: nodemailer.Transporter | null = null;
+
+function getEmailTransporter(): nodemailer.Transporter {
+  if (!emailTransporter) {
+    emailTransporter = nodemailer.createTransport(getEmailConfig());
+  }
+  return emailTransporter;
+}
+
+export { getEmailTransporter };
 
 export interface WelcomeEmailParams {
   email: string;
@@ -145,7 +153,8 @@ Thank you for being here.
 Founder, Vinamah`;
 
   try {
-    await emailTransporter.sendMail({
+    const transporter = getEmailTransporter();
+    await transporter.sendMail({
       from: fromAddress,
       to: email,
       subject: "Welcome to Vinamah",

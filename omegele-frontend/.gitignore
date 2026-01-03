@@ -51,3 +51,6 @@ prisma/migrations/*.sql
 # Logs
 logs
 *.log
+
+# Inauguration status
+.inauguration-status.json

@@ -70,6 +70,9 @@ export default function RootLayout({
                   <a href="/about" className="hover:text-[#ffd447] transition-colors">
                     About
                   </a>
+                  <a href="/events" className="hover:text-[#ffd447] transition-colors">
+                    Events
+                  </a>
                   <a href="/use-case" className="hover:text-[#ffd447] transition-colors">
                     Use Case
                   </a>

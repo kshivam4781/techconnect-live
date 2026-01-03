@@ -2,7 +2,9 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import LinkedIn from "next-auth/providers/linkedin";
 import { prisma } from "@/lib/prisma";
-import { sendWelcomeEmail } from "@/lib/email";
+import type { User } from "@prisma/client";
+// Lazy import email to avoid initialization errors
+const getSendWelcomeEmail = () => import("@/lib/email").then(m => m.sendWelcomeEmail);
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -174,7 +176,7 @@ export const authOptions = {
             include: { user: true },
           });
 
-          let user;
+          let user: User | null = null;
 
           if (accountRecord) {
             // Account exists, use the existing user
@@ -227,18 +229,21 @@ export const authOptions = {
             }
 
             // Send welcome email to new users with email (non-blocking)
-            if (isNewUser && user.email) {
+            if (isNewUser && user && user.email) {
               // Extract first name from full name, or use a default
               const firstName = name ? (name.split(" ")[0] || name) : "there";
+              const userEmail = user.email; // Store email to avoid null check issues in async callback
               
               // Send email asynchronously - don't block authentication if it fails
-              sendWelcomeEmail({
-                email: user.email,
-                firstName,
-              }).catch((emailError) => {
-                console.error("Failed to send welcome email (non-blocking):", emailError);
-                // Don't throw - we don't want to break user registration if email fails
-              });
+              getSendWelcomeEmail()
+                .then(sendWelcomeEmail => sendWelcomeEmail({
+                  email: userEmail,
+                  firstName,
+                }))
+                .catch((emailError) => {
+                  console.error("Failed to send welcome email (non-blocking):", emailError);
+                  // Don't throw - we don't want to break user registration if email fails
+                });
             }
 
             // Create the Account record
