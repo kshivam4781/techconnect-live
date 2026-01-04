@@ -309,3 +309,22 @@ model EventRegistration {
   @@index([email])
 }
 
+model EventNotification {
+  id              String   @id @default(cuid())
+  
+  // Subscriber info
+  name            String
+  email           String
+  
+  // Subscription status
+  isActive        Boolean  @default(true) // Whether they still want notifications
+  unsubscribedAt  DateTime? // When they unsubscribed (if applicable)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([email]) // One subscription per email
+  @@index([email])
+  @@index([isActive])
+}
+

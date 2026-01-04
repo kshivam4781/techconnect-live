@@ -467,9 +467,8 @@ export default function Home() {
       // Valid key - check if inauguration is already completed
       // Use a longer delay to ensure NextAuth session fetch is completely done
       try {
-        // Wait even longer to ensure NextAuth is completely done with all requests
-        // Also wait for any pending network requests to complete
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Small delay to ensure NextAuth is done with requests
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Use AbortController to cancel if component unmounts
         const controller = new AbortController();
@@ -504,17 +503,9 @@ export default function Home() {
 
         const data = await res.json();
         
-        // If already completed, just hide inauguration (redirect will happen on next navigation)
-        if (data.isCompleted) {
-          setCheckingInauguration(false);
-          // Clean URL without redirecting (avoids NextAuth conflicts)
-          if (typeof window !== "undefined" && window.history) {
-            window.history.replaceState({}, "", "/");
-          }
-          return;
-        }
-
-        // Valid key and not completed - show inauguration overlay
+        // Always show inauguration if valid key is in URL, regardless of completion status
+        // This allows re-accessing the page for testing/demonstration purposes
+        // Valid key - show inauguration overlay
         setShowInauguration(true);
         setCheckingInauguration(false);
       } catch (error) {
@@ -529,43 +520,14 @@ export default function Home() {
       }
     };
 
-    // Wait 4 seconds after NextAuth loads to ensure all internal requests complete
-    // This gives NextAuth plenty of time to finish its session fetch
+    // Wait 1 second after NextAuth loads to ensure all internal requests complete
+    // This gives NextAuth time to finish its session fetch
     const timer = setTimeout(() => {
       checkInauguration();
-    }, 4000);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [status]);
-
-  // Handle inauguration launch
-  const handleInaugurationLaunch = async () => {
-    try {
-      // Mark inauguration as completed
-      const res = await fetch("/api/inauguration", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          key: INAUGURATION_KEY,
-          action: "complete",
-        }),
-      });
-
-      if (res.ok) {
-        // Redirect to regular homepage using window.location to avoid NextAuth conflicts
-        window.location.href = "/";
-      } else {
-        // Still redirect even if API call fails
-        window.location.href = "/";
-      }
-    } catch (error) {
-      console.error("Error completing inauguration:", error);
-      // Still redirect even if API call fails
-      window.location.href = "/";
-    }
-  };
 
   // Fetch user statistics
   useEffect(() => {
@@ -701,7 +663,7 @@ export default function Home() {
   if (showInauguration) {
     return (
       <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'fixed', top: 0, left: 0, margin: 0, padding: 0 }}>
-        <InaugurationOverlay onLaunch={handleInaugurationLaunch} />
+        <InaugurationOverlay />
       </div>
     );
   }
@@ -846,7 +808,7 @@ export default function Home() {
               </>
             )}
 
-            <div className="mt-6 grid max-w-xl grid-cols-2 gap-4 text-left">
+            <div className="mt-6 grid max-w-xl grid-cols-1 sm:grid-cols-2 gap-4 text-left">
               <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
                 <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
                   {stats ? (
@@ -863,7 +825,7 @@ export default function Home() {
                 </p>
               </div>
               {stats && stats.totalActive > 0 && (
-                <div className="rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
+                <div className="hidden sm:block rounded-2xl border border-[#343d55] bg-[#101523] px-4 py-3">
                   <p className="text-2xl sm:text-3xl font-semibold text-[#f8f3e8]">
                     <>
                       {stats.totalActive}
@@ -969,12 +931,16 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
                 <video
                   className="relative w-full h-auto"
-                  src="/tutorial.webm"
                   controls
                   playsInline
                   preload="metadata"
-                  poster=""
+                  crossOrigin="anonymous"
                 >
+                  {/* MP4 for iOS Safari and better mobile support */}
+                  <source src="/tutorial.mp4" type="video/mp4" />
+                  {/* WebM for modern browsers */}
+                  <source src="/tutorial.webm" type="video/webm" />
+                  {/* Fallback message */}
                   Your browser does not support the video tag.
                 </video>
               </div>

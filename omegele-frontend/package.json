@@ -12,7 +12,8 @@
     "start": "NODE_ENV=production tsx server.ts",
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update-events": "tsx scripts/update-events.ts"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",

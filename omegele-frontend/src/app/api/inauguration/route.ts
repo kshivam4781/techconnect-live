@@ -103,6 +103,33 @@ export async function POST(request: Request) {
       });
     }
 
+    // If action is "reset", delete the status file to reset inauguration
+    if (action === "reset") {
+      try {
+        const { unlink } = await import("fs/promises");
+        try {
+          await unlink(STATUS_FILE);
+        } catch (error: any) {
+          // File doesn't exist, which is fine - it's already reset
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: "Inauguration status reset successfully.",
+          isCompleted: false,
+        });
+      } catch (error) {
+        console.error("Error resetting inauguration:", error);
+        return NextResponse.json(
+          { error: "Failed to reset inauguration" },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error completing inauguration:", error);

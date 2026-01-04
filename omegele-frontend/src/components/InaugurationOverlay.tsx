@@ -3,15 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-interface InaugurationOverlayProps {
-  onLaunch: () => void;
-}
-
-export function InaugurationOverlay({ onLaunch }: InaugurationOverlayProps) {
+export function InaugurationOverlay() {
   const [isLaunching, setIsLaunching] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [isSlidingUp, setIsSlidingUp] = useState(false);
-  const [showIntermediatePage, setShowIntermediatePage] = useState(false);
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -63,28 +57,12 @@ export function InaugurationOverlay({ onLaunch }: InaugurationOverlayProps) {
     // Step 1: Trigger slide-up animation
     setIsSlidingUp(true);
     
-    // Step 2: After slide-up completes, show intermediate page with flowers and fireworks
+    // Step 2: After slide-up completes, navigate to celebration page
     setTimeout(() => {
-      setShowIntermediatePage(true);
-      setShowConfetti(true);
+      router.push("/inauguration/celebration");
     }, 800); // Wait for slide-up animation to complete
-    
-    // Step 3: After intermediate page animation, launch the platform
-    setTimeout(() => {
-      onLaunch();
-    }, 4000); // Show intermediate page for 3-4 seconds
   };
 
-  // Confetti animation effect
-  useEffect(() => {
-    if (showConfetti) {
-      const duration = 3000;
-      const timer = setTimeout(() => {
-        setShowConfetti(false);
-      }, duration);
-      return () => clearTimeout(timer);
-    }
-  }, [showConfetti]);
 
   return (
     <div 
@@ -121,25 +99,6 @@ export function InaugurationOverlay({ onLaunch }: InaugurationOverlayProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-800/70 to-slate-900/80" />
       </div>
 
-      {/* Confetti Effect */}
-      {showConfetti && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {Array.from({ length: 50 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute confetti"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 0.5}s`,
-                animationDuration: `${2 + Math.random() * 2}s`,
-              }}
-            >
-              🎉
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
@@ -244,269 +203,6 @@ export function InaugurationOverlay({ onLaunch }: InaugurationOverlayProps) {
         </p>
       </div>
 
-      {/* Intermediate Page with Flowers and Fireworks */}
-      {showIntermediatePage && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-900 to-red-900">
-          {/* Fireworks */}
-          <div className="absolute inset-0 overflow-hidden">
-            {Array.from({ length: 30 }).map((_, i) => (
-              <div
-                key={`firework-${i}`}
-                className="absolute firework"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 50}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${1.5 + Math.random() * 1}s`,
-                }}
-              >
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-                <div className="firework-particle" />
-              </div>
-            ))}
-          </div>
-
-          {/* Flowers */}
-          <div className="absolute inset-0 overflow-hidden">
-            {Array.from({ length: 40 }).map((_, i) => (
-              <div
-                key={`flower-${i}`}
-                className="absolute flower"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${3 + Math.random() * 2}s`,
-                  fontSize: `${20 + Math.random() * 30}px`,
-                }}
-              >
-                {['🌸', '🌺', '🌻', '🌷', '🌹', '🌼', '💐', '🌿'][Math.floor(Math.random() * 8)]}
-              </div>
-            ))}
-          </div>
-
-          {/* Sparkles */}
-          <div className="absolute inset-0 overflow-hidden">
-            {Array.from({ length: 25 }).map((_, i) => (
-              <div
-                key={`sparkle-${i}`}
-                className="absolute sparkle"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 1.5}s`,
-                  animationDuration: `${2 + Math.random() * 1.5}s`,
-                  fontSize: `${15 + Math.random() * 20}px`,
-                }}
-              >
-                ✨
-              </div>
-            ))}
-          </div>
-
-          {/* Center Message */}
-          <div className="relative z-10 text-center px-4">
-            <h2 className="text-6xl sm:text-7xl md:text-8xl font-bold text-white mb-6 animate-pulse">
-              🎊
-            </h2>
-            <h3 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4">
-              Welcome to Vinamah!
-            </h3>
-            <p className="text-2xl sm:text-3xl text-yellow-200 font-semibold">
-              Platform Launching...
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Confetti CSS Animation */}
-      <style jsx>{`
-        @keyframes confetti-fall {
-          0% {
-            transform: translateY(-100vh) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) rotate(720deg);
-            opacity: 0;
-          }
-        }
-        .confetti {
-          animation: confetti-fall linear forwards;
-          font-size: 1.5rem;
-        }
-
-        @keyframes firework-explode-1 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(60px, 0) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-2 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(42px, 42px) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-3 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(0, 60px) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-4 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-42px, 42px) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-5 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-60px, 0) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-6 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-42px, -42px) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-7 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(0, -60px) scale(0);
-            opacity: 0;
-          }
-        }
-        @keyframes firework-explode-8 {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(42px, -42px) scale(0);
-            opacity: 0;
-          }
-        }
-
-        .firework {
-          position: absolute;
-          width: 0;
-          height: 0;
-        }
-
-        .firework-particle {
-          position: absolute;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-        }
-
-        .firework-particle:nth-child(1) {
-          background: #ffd447;
-          animation: firework-explode-1 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(2) {
-          background: #ff6b6b;
-          animation: firework-explode-2 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(3) {
-          background: #4ecdc4;
-          animation: firework-explode-3 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(4) {
-          background: #ffe66d;
-          animation: firework-explode-4 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(5) {
-          background: #ff6b9d;
-          animation: firework-explode-5 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(6) {
-          background: #c44569;
-          animation: firework-explode-6 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(7) {
-          background: #f8b500;
-          animation: firework-explode-7 1.5s ease-out forwards;
-        }
-        .firework-particle:nth-child(8) {
-          background: #6c5ce7;
-          animation: firework-explode-8 1.5s ease-out forwards;
-        }
-
-        @keyframes flower-float {
-          0% {
-            transform: translateY(100vh) rotate(0deg);
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-100vh) rotate(360deg);
-            opacity: 0;
-          }
-        }
-
-        .flower {
-          animation: flower-float linear forwards;
-          pointer-events: none;
-        }
-
-        @keyframes sparkle-twinkle {
-          0%, 100% {
-            opacity: 0;
-            transform: scale(0) rotate(0deg);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1) rotate(180deg);
-          }
-        }
-
-        .sparkle {
-          animation: sparkle-twinkle ease-in-out infinite;
-          pointer-events: none;
-        }
-      `}</style>
     </div>
   );
 }

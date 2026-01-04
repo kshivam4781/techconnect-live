@@ -23,6 +23,15 @@ export default function EventsPage() {
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [pastEvents, setPastEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Email notification form state
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -63,6 +72,48 @@ export default function EventsPage() {
     });
   };
 
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const response = await fetch("/api/events/notify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmitMessage({
+          type: "success",
+          text: data.message || "Successfully subscribed to event notifications!",
+        });
+        setName("");
+        setEmail("");
+        // Clear message after 5 seconds
+        setTimeout(() => setSubmitMessage(null), 5000);
+      } else {
+        setSubmitMessage({
+          type: "error",
+          text: data.error || "Failed to subscribe. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error("Error subscribing:", error);
+      setSubmitMessage({
+        type: "error",
+        text: "An error occurred. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const EventCard = ({ event }: { event: Event }) => {
     const isPast = new Date(event.eventDate) < new Date();
     const spotsLeft =
@@ -76,12 +127,12 @@ export default function EventsPage() {
         className="group cursor-pointer rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-slate-300 overflow-hidden"
       >
         {event.image && (
-          <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+          <div className="relative h-48 w-full overflow-hidden bg-slate-100 flex items-center justify-center p-4">
             <Image
               src={event.image}
               alt={event.title}
               fill
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-contain"
             />
           </div>
         )}
@@ -147,29 +198,6 @@ export default function EventsPage() {
                 {event.isVirtual ? "Virtual Event" : event.location}
               </span>
             </div>
-            {!isPast && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <svg
-                  className="h-4 w-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                <span>
-                  {event.registrationCount} registered
-                  {event.maxAttendees
-                    ? ` / ${event.maxAttendees} max`
-                    : ""}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -197,6 +225,112 @@ export default function EventsPage() {
           <p className="mt-4 text-lg text-slate-600">
             Join our upcoming events and connect with industry leaders
           </p>
+        </div>
+
+        {/* Email Notification Subscription Form */}
+        <div className="mb-12 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <form onSubmit={handleSubscribe} className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[120px]">
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#ffd447] focus:outline-none focus:ring-1 focus:ring-[#ffd447]"
+                placeholder="Your name"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#ffd447] focus:outline-none focus:ring-1 focus:ring-[#ffd447]"
+                placeholder="your.email@example.com"
+                disabled={isSubmitting}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-lg bg-[#ffd447] px-6 py-2 text-sm font-semibold text-slate-900 transition-all hover:bg-[#ffd447]/90 focus:outline-none focus:ring-2 focus:ring-[#ffd447] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Subscribing...
+                </span>
+              ) : (
+                "Notify Me About Events"
+              )}
+            </button>
+            {submitMessage && (
+              <div className="w-full">
+                <div
+                  className={`rounded-lg p-2 text-xs ${
+                    submitMessage.type === "success"
+                      ? "bg-green-50 text-green-800"
+                      : "bg-red-50 text-red-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {submitMessage.type === "success" ? (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    )}
+                    <p className="font-medium">{submitMessage.text}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </form>
         </div>
 
         {/* Upcoming Events */}
