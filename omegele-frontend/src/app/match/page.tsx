@@ -2194,7 +2194,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     playsInline
                     muted
                     className="h-full w-full object-cover"
-                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
+                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 15, position: 'relative' }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (ready state)");
                       if (localVideoRef.current) {
@@ -2326,7 +2326,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     playsInline
                     muted
                     className="h-full w-full object-cover"
-                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
+                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 15, position: 'relative' }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (matched/searching state)");
                       if (localVideoRef.current) {
@@ -2366,7 +2366,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                       playsInline
                       muted={false}
                       className="h-full w-full object-cover bg-[#111827]"
-                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
+                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 15, position: 'relative' }}
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded (matched state)");
                         if (remoteVideoRef.current) {
@@ -2427,8 +2427,8 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                         }
                       }}
                     />
-                    {!hasRemoteVideo && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10 pointer-events-none">
+                    {!hasRemoteVideo && !remoteVideoRef.current?.srcObject && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-[1] pointer-events-none">
                         <div className="text-center">
                           <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold mx-auto mb-2">
                             {matchStatus === "matched" ? (otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?") : "?"}
@@ -2532,7 +2532,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                       playsInline
                       muted={false}
                       className="h-full w-full object-cover bg-[#111827]"
-                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
+                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 15, position: 'relative' }}
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded (in-call)");
                         if (remoteVideoRef.current) {
@@ -2593,8 +2593,8 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                         }
                       }}
                     />
-                    {!hasRemoteVideo && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10 pointer-events-none">
+                    {!hasRemoteVideo && !remoteVideoRef.current?.srcObject && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-[1] pointer-events-none">
                         <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
                           {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}
                         </div>
@@ -2629,7 +2629,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     playsInline
                     muted
                     className="h-full w-full object-cover"
-                    style={{ display: 'block', visibility: 'visible', opacity: 1 }}
+                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 15, position: 'relative' }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (in-call state)");
                       if (localVideoRef.current) {
