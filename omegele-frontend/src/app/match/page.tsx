@@ -39,7 +39,7 @@ export default function MatchPage() {
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
-  const [otherUserInfo, setOtherUserInfo] = useState<{ name: string; email: string; showName: boolean } | null>(null);
+  const [otherUserInfo, setOtherUserInfo] = useState<{ name: string; email: string; showName: boolean; isGuest: boolean } | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
   const [otherUserLocation, setOtherUserLocation] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -931,6 +931,7 @@ export default function MatchPage() {
               name: otherUser.name || "User",
               email: otherUser.email || "",
               showName: otherUser.showName ?? true,
+              isGuest: otherUser.isGuest ?? false,
             });
           }
 
@@ -2482,9 +2483,20 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                         </div>
                       </div>
                     )}
-                    <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20">
+                    <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20 flex items-center gap-1.5">
                       {matchStatus === "matched" && remoteVideoRef.current?.srcObject
-                        ? (otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User")
+                        ? (
+                            <>
+                              {otherUserInfo?.isGuest && (
+                                <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-[#ffd447] to-[#facc15] text-[#18120b] font-bold text-[10px] sm:text-xs shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                                  GUEST
+                                </span>
+                              )}
+                              {otherUserInfo?.showName 
+                                ? <span>{otherUserInfo.name || "User"}</span>
+                                : "Anonymous User"}
+                            </>
+                          )
                         : (matchStatus === "matched" ? "Connecting..." : "Waiting...")}
                     </div>
                   </>
@@ -2632,8 +2644,15 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20">
-                  {otherUserInfo?.showName ? (otherUserInfo.name || "User") : "Anonymous User"}
+                <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 rounded-full border border-[#343d55] bg-[#0b1018]/80 px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium backdrop-blur z-20 flex items-center gap-1.5">
+                  {otherUserInfo?.isGuest && (
+                    <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-[#ffd447] to-[#facc15] text-[#18120b] font-bold text-[10px] sm:text-xs shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                      GUEST
+                    </span>
+                  )}
+                  {otherUserInfo?.showName 
+                    ? <span>{otherUserInfo.name || "User"}</span>
+                    : "Anonymous User"}
                 </div>
               </div>
 
