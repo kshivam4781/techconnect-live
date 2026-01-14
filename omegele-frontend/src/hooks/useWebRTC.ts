@@ -529,14 +529,16 @@ export function useWebRTC({
           });
         }
         
-        // Log video element state
-        console.log("Local video check - hasStream:", !!localVideoRef.current.srcObject, "paused:", localVideoRef.current.paused, "readyState:", localVideoRef.current.readyState);
+        // Only log if there's an issue
+        if (!localVideoRef.current.srcObject && enabled) {
+          console.warn("Local video element missing stream");
+        }
       }
     };
     
-    // Check immediately and periodically
+    // Check immediately and periodically (less frequent)
     checkLocalVideo();
-    const interval = setInterval(checkLocalVideo, 500);
+    const interval = setInterval(checkLocalVideo, 2000); // Reduced from 500ms to 2000ms
     
     return () => clearInterval(interval);
   }, [enabled]);
@@ -574,12 +576,11 @@ export function useWebRTC({
             }
           });
           
-          // Log audio tracks specifically
+          // Only log audio tracks if there's an issue
           const audioTracks = stream.getAudioTracks();
-          console.log("Remote stream audio tracks:", audioTracks.length);
-          audioTracks.forEach((track) => {
-            console.log("Audio track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState, "muted:", track.muted);
-          });
+          if (audioTracks.length === 0 && stream.getVideoTracks().length > 0) {
+            console.warn("Remote stream has video but no audio tracks");
+          }
           
           // Ensure video element is not muted and volume is max
           remoteVideoRef.current.muted = false;
@@ -633,8 +634,8 @@ export function useWebRTC({
     // Check immediately
     checkRemoteVideo();
     
-    // Check periodically to catch when element becomes available or stream changes
-    const interval = setInterval(checkRemoteVideo, 500);
+    // Check periodically to catch when element becomes available or stream changes (less frequent)
+    const interval = setInterval(checkRemoteVideo, 2000); // Reduced from 500ms to 2000ms
     
     return () => clearInterval(interval);
   }, [matchId, enabled]);

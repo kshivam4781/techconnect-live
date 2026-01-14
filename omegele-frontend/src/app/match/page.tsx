@@ -112,10 +112,7 @@ export default function MatchPage() {
       const hasTracks = videoTracks.length > 0 && videoTracks.some(track => track.readyState === 'live' && track.enabled);
       setHasRemoteVideo(hasTracks);
       
-      // Log for debugging
-      if (hasTracks) {
-        console.log("Remote video tracks detected:", videoTracks.length, "tracks");
-      }
+      // Only log when tracks change, not on every check
     };
 
     // Check immediately
@@ -1172,82 +1169,55 @@ export default function MatchPage() {
             });
           }
           
-          // Check remote video
-          if (remoteVideoRef.current) {
-            console.log("Remote video element available, srcObject:", remoteVideoRef.current.srcObject ? "exists" : "null");
-            if (remoteVideoRef.current.srcObject) {
-              const stream = remoteVideoRef.current.srcObject as MediaStream;
-              console.log("Remote stream tracks:", stream.getTracks().length);
-              stream.getTracks().forEach((track) => {
-                console.log("Remote track:", track.kind, "enabled:", track.enabled, "readyState:", track.readyState);
-              });
-            }
+          // Check remote video (only log if there's an issue)
+          // Note: This runs after match is found, so status should be matched or in-call
+          if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+            console.warn("Remote video element exists but no stream attached");
           }
         }, 1000);
       }, 2000);
     }
   }, [matchData, matchStatus, startCall, callMode]);
 
-  // Debug: Monitor video element states
+  // Debug: Monitor video element states (only log warnings for issues)
   useEffect(() => {
-    const logVideoStates = () => {
+    const checkVideoStates = () => {
       if (localVideoRef.current) {
         const localStream = localVideoRef.current.srcObject as MediaStream;
         const rect = localVideoRef.current.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(localVideoRef.current);
-        const state = {
-          hasStream: !!localStream,
-          tracks: localStream ? localStream.getTracks().length : 0,
-          videoTracks: localStream ? localStream.getVideoTracks().length : 0,
-          audioTracks: localStream ? localStream.getAudioTracks().length : 0,
-          paused: localVideoRef.current.paused,
-          readyState: localVideoRef.current.readyState,
-          muted: localVideoRef.current.muted,
-          width: rect.width,
-          height: rect.height,
-          visible: rect.width > 0 && rect.height > 0,
-          display: computedStyle.display,
-          visibility: computedStyle.visibility,
-          opacity: computedStyle.opacity,
-          zIndex: computedStyle.zIndex,
-        };
-        console.log("Local video state:", state);
-        if (!state.visible || state.width === 0 || state.height === 0) {
-          console.warn("⚠️ LOCAL VIDEO NOT VISIBLE - width:", state.width, "height:", state.height, "display:", state.display);
+        const hasStream = !!localStream;
+        const visible = rect.width > 0 && rect.height > 0;
+        
+        // Only log warnings if there's an issue
+        if (!hasStream && (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call")) {
+          console.warn("⚠️ LOCAL VIDEO: No stream attached");
+        }
+        if (hasStream && !visible) {
+          console.warn("⚠️ LOCAL VIDEO NOT VISIBLE - width:", rect.width, "height:", rect.height, "display:", computedStyle.display, "visibility:", computedStyle.visibility, "opacity:", computedStyle.opacity);
         }
       }
       if (remoteVideoRef.current) {
         const remoteStream = remoteVideoRef.current.srcObject as MediaStream;
         const rect = remoteVideoRef.current.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(remoteVideoRef.current);
-        const state = {
-          hasStream: !!remoteStream,
-          tracks: remoteStream ? remoteStream.getTracks().length : 0,
-          videoTracks: remoteStream ? remoteStream.getVideoTracks().length : 0,
-          audioTracks: remoteStream ? remoteStream.getAudioTracks().length : 0,
-          paused: remoteVideoRef.current.paused,
-          readyState: remoteVideoRef.current.readyState,
-          muted: remoteVideoRef.current.muted,
-          volume: remoteVideoRef.current.volume,
-          width: rect.width,
-          height: rect.height,
-          visible: rect.width > 0 && rect.height > 0,
-          display: computedStyle.display,
-          visibility: computedStyle.visibility,
-          opacity: computedStyle.opacity,
-          zIndex: computedStyle.zIndex,
-        };
-        console.log("Remote video state:", state);
-        if (!state.visible || state.width === 0 || state.height === 0) {
-          console.warn("⚠️ REMOTE VIDEO NOT VISIBLE - width:", state.width, "height:", state.height, "display:", state.display);
+        const hasStream = !!remoteStream;
+        const visible = rect.width > 0 && rect.height > 0;
+        
+        // Only log warnings if there's an issue
+        if (!hasStream && (matchStatus === "matched" || matchStatus === "in-call")) {
+          console.warn("⚠️ REMOTE VIDEO: No stream attached");
+        }
+        if (hasStream && !visible) {
+          console.warn("⚠️ REMOTE VIDEO NOT VISIBLE - width:", rect.width, "height:", rect.height, "display:", computedStyle.display, "visibility:", computedStyle.visibility, "opacity:", computedStyle.opacity);
         }
       }
     };
     
-    // Log immediately and periodically when in relevant states
+    // Check periodically when in relevant states (less frequent)
     if (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") {
-      logVideoStates();
-      const interval = setInterval(logVideoStates, 2000);
+      checkVideoStates();
+      const interval = setInterval(checkVideoStates, 5000); // Reduced from 2000ms to 5000ms
       return () => clearInterval(interval);
     }
   }, [matchStatus]);
@@ -1331,8 +1301,8 @@ export default function MatchPage() {
       // Check immediately
       checkAndSetupRemoteVideo();
       
-      // Check periodically for a short time to catch delayed stream attachment
-      const interval = setInterval(checkAndSetupRemoteVideo, 500);
+      // Check periodically for a short time to catch delayed stream attachment (less frequent)
+      const interval = setInterval(checkAndSetupRemoteVideo, 2000); // Reduced from 500ms to 2000ms
       const timeout = setTimeout(() => clearInterval(interval), 10000);
       
       return () => {
