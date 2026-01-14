@@ -63,6 +63,7 @@ export default function MatchPage() {
   const [extendedDuration] = useState<number>(30 * 60); // 30 minutes in seconds
   const [isAcceptingTerms, setIsAcceptingTerms] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState<boolean>(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -93,6 +94,93 @@ export default function MatchPage() {
     enabled: (matchStatus === "ready" || matchStatus === "searching" || matchStatus === "matched" || matchStatus === "in-call") && callMode === "VIDEO",
     audioOnly: false,
   });
+
+  // Monitor remote video tracks to update hasRemoteVideo state
+  useEffect(() => {
+    if (matchStatus !== "matched" && matchStatus !== "in-call") {
+      setHasRemoteVideo(false);
+      return;
+    }
+
+    const checkVideoTracks = () => {
+      if (!remoteVideoRef.current?.srcObject) {
+        setHasRemoteVideo(false);
+        return;
+      }
+      const stream = remoteVideoRef.current.srcObject as MediaStream;
+      const videoTracks = stream.getVideoTracks();
+      const hasTracks = videoTracks.length > 0 && videoTracks.some(track => track.readyState === 'live' && track.enabled);
+      setHasRemoteVideo(hasTracks);
+      
+      // Log for debugging
+      if (hasTracks) {
+        console.log("Remote video tracks detected:", videoTracks.length, "tracks");
+      }
+    };
+
+    // Check immediately
+    checkVideoTracks();
+
+    // Check periodically
+    const interval = setInterval(checkVideoTracks, 500);
+
+    // Also listen for track events
+    const handleTrackChange = () => {
+      checkVideoTracks();
+    };
+
+    // Listen for when stream is added to video element
+    const videoElement = remoteVideoRef.current;
+    if (videoElement) {
+      const handleLoadedMetadata = () => {
+        checkVideoTracks();
+      };
+      videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      // Also check when srcObject changes
+      const observer = new MutationObserver(() => {
+        checkVideoTracks();
+      });
+      observer.observe(videoElement, { attributes: true, attributeFilter: ['src'] });
+
+      if (videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream;
+        stream.getVideoTracks().forEach(track => {
+          track.addEventListener('ended', handleTrackChange);
+          track.addEventListener('mute', handleTrackChange);
+          track.addEventListener('unmute', handleTrackChange);
+        });
+        
+        // Listen for new tracks being added
+        stream.addEventListener('addtrack', (event) => {
+          if (event.track.kind === 'video') {
+            checkVideoTracks();
+            event.track.addEventListener('ended', handleTrackChange);
+            event.track.addEventListener('mute', handleTrackChange);
+            event.track.addEventListener('unmute', handleTrackChange);
+          }
+        });
+      }
+
+      return () => {
+        clearInterval(interval);
+        videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        observer.disconnect();
+        if (videoElement.srcObject) {
+          const stream = videoElement.srcObject as MediaStream;
+          stream.getVideoTracks().forEach(track => {
+            track.removeEventListener('ended', handleTrackChange);
+            track.removeEventListener('mute', handleTrackChange);
+            track.removeEventListener('unmute', handleTrackChange);
+          });
+        }
+      };
+    }
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [matchStatus]);
 
   // Monitor peer connection state for disconnections
   useEffect(() => {
@@ -2425,10 +2513,18 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                           const stream = remoteVideoRef.current.srcObject as MediaStream;
                           if (stream) {
                             const audioTracks = stream.getAudioTracks();
+                            const videoTracks = stream.getVideoTracks();
                             console.log("Audio tracks in metadata handler:", audioTracks.length);
+                            console.log("Video tracks in metadata handler:", videoTracks.length);
                             audioTracks.forEach((track) => {
                               console.log("Audio track:", track.label, "enabled:", track.enabled);
                             });
+                            videoTracks.forEach((track) => {
+                              console.log("Video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                            });
+                            // Update hasRemoteVideo state
+                            const hasTracks = videoTracks.length > 0 && videoTracks.some(track => track.readyState === 'live' && track.enabled);
+                            setHasRemoteVideo(hasTracks);
                           }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
@@ -2471,8 +2567,8 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                         }
                       }}
                     />
-                    {!remoteVideoRef.current?.srcObject && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10">
+                    {!hasRemoteVideo && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10 pointer-events-none">
                         <div className="text-center">
                           <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold mx-auto mb-2">
                             {matchStatus === "matched" ? (otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?") : "?"}
@@ -2583,10 +2679,18 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                           const stream = remoteVideoRef.current.srcObject as MediaStream;
                           if (stream) {
                             const audioTracks = stream.getAudioTracks();
+                            const videoTracks = stream.getVideoTracks();
                             console.log("Audio tracks in metadata handler (in-call):", audioTracks.length);
+                            console.log("Video tracks in metadata handler (in-call):", videoTracks.length);
                             audioTracks.forEach((track) => {
                               console.log("Audio track:", track.label, "enabled:", track.enabled);
                             });
+                            videoTracks.forEach((track) => {
+                              console.log("Video track:", track.label, "enabled:", track.enabled, "readyState:", track.readyState);
+                            });
+                            // Update hasRemoteVideo state
+                            const hasTracks = videoTracks.length > 0 && videoTracks.some(track => track.readyState === 'live' && track.enabled);
+                            setHasRemoteVideo(hasTracks);
                           }
                           remoteVideoRef.current.muted = false;
                           remoteVideoRef.current.volume = 1.0;
@@ -2629,7 +2733,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                         }
                       }}
                     />
-                    {!remoteVideoRef.current?.srcObject && (
+                    {!hasRemoteVideo && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#111827] z-10 pointer-events-none">
                         <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-[#1f2937] text-xl sm:text-2xl font-semibold">
                           {otherUserInfo?.showName && otherUserInfo?.name ? otherUserInfo.name.charAt(0) : "?"}

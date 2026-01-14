@@ -27,6 +27,7 @@ export async function GET(
             image: true,
             email: true,
             showName: true,
+            isGuest: true,
           },
         },
         user2: {
@@ -36,6 +37,7 @@ export async function GET(
             image: true,
             email: true,
             showName: true,
+            isGuest: true,
           },
         },
       },
