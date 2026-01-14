@@ -409,120 +409,7 @@ export default function MatchPage() {
     };
   }, []);
 
-  // Protection: Disable DevTools shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Allow shortcuts in input, textarea, and contenteditable elements
-      const target = e.target as HTMLElement;
-      const isInputElement = 
-        target.tagName === "INPUT" || 
-        target.tagName === "TEXTAREA" || 
-        target.isContentEditable ||
-        target.closest("input, textarea, [contenteditable]");
-
-      // Only block shortcuts outside of input fields
-      if (isInputElement) {
-        // Allow all shortcuts in input fields except DevTools shortcuts
-        if (e.key === "F12" || 
-            (e.key === "I" && e.ctrlKey && e.shiftKey) ||
-            (e.key === "J" && e.ctrlKey && e.shiftKey) ||
-            (e.key === "C" && e.ctrlKey && e.shiftKey)) {
-          e.preventDefault();
-          return false;
-        }
-        return; // Allow other shortcuts in input fields
-      }
-
-      // Disable F12 (DevTools)
-      if (e.key === "F12") {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+Shift+I (DevTools)
-      if (e.key === "I" && e.ctrlKey && e.shiftKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+Shift+J (Console)
-      if (e.key === "J" && e.ctrlKey && e.shiftKey) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Disable Ctrl+Shift+C (Inspect Element)
-      if (e.key === "C" && e.ctrlKey && e.shiftKey) {
-        e.preventDefault();
-        return false;
-      }
-    };
-
-    // Detect DevTools opening (basic detection)
-    let devToolsOpen = false;
-    let alertShown = false;
-    const detectDevTools = () => {
-      const threshold = 160;
-      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-      
-      if (widthThreshold || heightThreshold) {
-        if (!devToolsOpen) {
-          devToolsOpen = true;
-          console.warn("Developer tools detected. Please close them to continue.");
-          // Show warning only once per session to avoid being too intrusive
-          if (!alertShown) {
-            alertShown = true;
-            alert("Developer tools detected. Please close them to continue using the application.");
-          }
-        }
-      } else {
-        devToolsOpen = false;
-        // Reset alert flag when DevTools is closed
-        if (alertShown) {
-          alertShown = false;
-        }
-      }
-    };
-
-    // Monitor for DevTools
-    const devToolsInterval = setInterval(detectDevTools, 500);
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      clearInterval(devToolsInterval);
-    };
-  }, []);
-
-
-  // Protection: Disable text selection via CSS
-  useEffect(() => {
-    // Add CSS to prevent text selection
-    const style = document.createElement("style");
-    style.textContent = `
-      * {
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        user-select: none !important;
-        -webkit-touch-callout: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-      }
-      input, textarea {
-        -webkit-user-select: text !important;
-        -moz-user-select: text !important;
-        -ms-user-select: text !important;
-        user-select: text !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
+  // DevTools and text selection are now enabled for debugging
 
   // Timer for call (counts up) and conversation duration (counts down)
   useEffect(() => {
@@ -2337,6 +2224,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (ready state)");
                       if (localVideoRef.current) {
@@ -2468,6 +2356,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                     playsInline
                     muted
                     className="h-full w-full object-cover"
+                    style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
                     onLoadedMetadata={() => {
                       console.log("Local video metadata loaded (matched/searching state)");
                       if (localVideoRef.current) {
@@ -2507,6 +2396,7 @@ ${feedback.improvements ? `- Improvements: ${feedback.improvements}` : ""}`;
                       playsInline
                       muted={false}
                       className="h-full w-full object-cover bg-[#111827]"
+                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 1 }}
                       onLoadedMetadata={() => {
                         console.log("Remote video metadata loaded (matched state)");
                         if (remoteVideoRef.current) {
